@@ -1,4 +1,8 @@
 from src.service.protocols import KafkaProducer, TrackRepository
+from src.models.track import Track
+import uuid
+import src.adapters.repository.errors as adapter_errors
+import src.service.errors as service_errors
 
 
 class TrackService:
@@ -6,4 +10,107 @@ class TrackService:
         self,
         track_repository: TrackRepository,
         kafka_producer: KafkaProducer,
-    ) -> None: ...
+    ) -> None:
+        self._track_repository = track_repository
+        self._kafka_producer = kafka_producer
+
+    def create_track(self, track: Track) -> uuid.UUID:
+        """
+        Create a new track
+
+        Args:
+            track (Track): The track to create
+
+        Returns:
+            uuid.UUID: The ID of the created track
+
+        Raises:
+            TrackNotFoundError: If the track could not be created
+        """
+
+        id = self._track_repository.create_track(track)
+
+        track.id = id
+        self._kafka_producer.send_create_track(track)
+
+        return id
+
+    def update_track(self, track: Track):
+        """
+        Update an existing track
+
+        Updates full state of the track including all roles
+
+        Args:
+            track (Track): The track to update
+
+        Raises:
+            TrackNotFoundError: If the track could not be updated
+        """
+
+        try:
+            self._track_repository.update_track(track)
+            self._kafka_producer.send_update_track(track)
+        except adapter_errors.TrackNotFoundError as e:
+            raise service_errors.TrackNotFoundError("Failed to update track") from e
+
+    def delete_track(self, id: uuid.UUID):
+        """
+        Delete an existing track
+
+        Args:
+            id (uuid.UUID): The ID of the track to delete
+
+        Raises:
+            TrackNotFoundError: If the track could not be deleted
+        """
+
+        try:
+            self._track_repository.delete_track(id)
+            self._kafka_producer.send_delete_track(id)
+        except adapter_errors.TrackNotFoundError as e:
+            raise service_errors.TrackNotFoundError("Failed to delete track") from e
+
+    def get_track(self, id: uuid.UUID):
+        """
+        Get a track by ID
+
+        Args:
+            id (uuid.UUID): The ID of the track to get
+
+        Returns:
+            Track: The track with the given ID
+
+        Raises:
+            TrackNotFoundError: If the track could not be found
+            RoleNotFoundError: If a role could not be found
+        """
+
+        try:
+            return self._track_repository.get_track(id)
+        except adapter_errors.TrackNotFoundError as e:
+            raise service_errors.TrackNotFoundError("Failed to get track") from e
+        except adapter_errors.RoleNotFoundError as e:
+            raise service_errors.RoleNotFoundError("Failed to get track") from e
+
+    def get_tracks_by_event_id(self, event_id: uuid.UUID):
+        """
+        Get all tracks for an event
+
+        Args:
+            event_id (uuid.UUID): The ID of the event to get tracks for
+
+        Returns:
+            list[Track]: The tracks for the event
+
+        Raises:
+            EventNotFoundError: If the event could not be found
+            RoleNotFoundError: If a role could not be found
+        """
+
+        try:
+            return self._track_repository.get_tracks_by_event_id(event_id)
+        except adapter_errors.EventNotFoundError as e:
+            raise service_errors.EventNotFoundError("Failed to get tracks") from e
+        except adapter_errors.RoleNotFoundError as e:
+            raise service_errors.RoleNotFoundError("Failed to get tracks") from e
