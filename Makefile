@@ -1,3 +1,7 @@
 .PHONY: run
 run:
-	python -m src.main run
+	uv python -m src.main run
+
+.PHONY: test
+test:
+	uv run pytest --cov=src
