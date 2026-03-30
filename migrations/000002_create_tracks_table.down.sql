@@ -1,0 +1,3 @@
+DROP TABLE IF EXISTS tracks;
+
+DROP TYPE IF EXISTS track_status;

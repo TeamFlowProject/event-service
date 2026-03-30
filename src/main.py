@@ -94,12 +94,5 @@ def run() -> None:
     asyncio.run(_run(settings))
 
 
-@app.command()
-def migrate() -> None:
-    settings = Settings()
-    _setup_logger(settings)
-    logger.info("Running migrations...")
-
-
 if __name__ == "__main__":
     app()
