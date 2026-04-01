@@ -147,6 +147,18 @@ class TestTrackPostgresRepository:
             await repository.get_track(track.id)
 
     @pytest.mark.asyncio
+    async def test_update_track_not_found(self, repository, event_id):
+        track = _make_track(event_id)
+
+        with pytest.raises(TrackNotFoundError):
+            await repository.update_track(track)
+
+    @pytest.mark.asyncio
+    async def test_delete_track_not_found(self, repository):
+        with pytest.raises(TrackNotFoundError):
+            await repository.delete_track(uuid.uuid4())
+
+    @pytest.mark.asyncio
     async def test_get_tracks_by_event_id(self, repository, event_id):
         track1 = _make_track(event_id)
         track2 = _make_track(event_id)

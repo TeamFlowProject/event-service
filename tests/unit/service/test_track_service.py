@@ -1,11 +1,12 @@
 import uuid
 from datetime import datetime
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock
+
 import pytest
 
 import src.adapters.repository.errors as adapter_errors
 import src.service.errors as service_errors
-from src.models.track import Track, Role, TrackStatusEnum
+from src.models.track import Track, TrackStatusEnum
 from src.service.track_service import TrackService
 
 
@@ -30,12 +31,12 @@ def make_track(**kwargs) -> Track:
 
 @pytest.fixture
 def repo():
-    return MagicMock()
+    return AsyncMock()
 
 
 @pytest.fixture
 def kafka():
-    return MagicMock()
+    return AsyncMock()
 
 
 @pytest.fixture
@@ -44,113 +45,123 @@ def service(repo, kafka):
 
 
 class TestCreateTrack:
-    def test_returns_id(self, service, repo, kafka):
+    @pytest.mark.asyncio
+    async def test_returns_id(self, service):
         track = make_track()
-        new_id = uuid.uuid4()
-        repo.create_track.return_value = new_id
 
-        result = service.create_track(track)
+        result = await service.create_track(track)
 
-        assert result == new_id
+        assert isinstance(result, uuid.UUID)
 
-    def test_sets_track_id_before_kafka(self, service, repo, kafka):
+    @pytest.mark.asyncio
+    async def test_sets_new_track_id(self, service, kafka):
         track = make_track()
-        new_id = uuid.uuid4()
-        repo.create_track.return_value = new_id
+        original_id = track.id
 
-        service.create_track(track)
+        result = await service.create_track(track)
 
+        assert result != original_id
         sent_track = kafka.send_create_track.call_args[0][0]
-        assert sent_track.id == new_id
+        assert sent_track.id == result
 
-    def test_calls_repo_and_kafka(self, service, repo, kafka):
+    @pytest.mark.asyncio
+    async def test_calls_repo_and_kafka(self, service, repo, kafka):
         track = make_track()
-        repo.create_track.return_value = uuid.uuid4()
 
-        service.create_track(track)
+        await service.create_track(track)
 
         repo.create_track.assert_called_once_with(track)
         kafka.send_create_track.assert_called_once()
 
 
 class TestUpdateTrack:
-    def test_calls_repo_and_kafka(self, service, repo, kafka):
+    @pytest.mark.asyncio
+    async def test_calls_repo_and_kafka(self, service, repo, kafka):
         track = make_track()
 
-        service.update_track(track)
+        await service.update_track(track)
 
         repo.update_track.assert_called_once_with(track)
         kafka.send_update_track.assert_called_once_with(track)
 
-    def test_raises_service_error_when_not_found(self, service, repo, kafka):
+    @pytest.mark.asyncio
+    async def test_raises_service_error_when_not_found(self, service, repo, kafka):
         repo.update_track.side_effect = adapter_errors.TrackNotFoundError
 
         with pytest.raises(service_errors.TrackNotFoundError):
-            service.update_track(make_track())
+            await service.update_track(make_track())
 
         kafka.send_update_track.assert_not_called()
 
 
 class TestDeleteTrack:
-    def test_calls_repo_and_kafka(self, service, repo, kafka):
+    @pytest.mark.asyncio
+    async def test_calls_repo_and_kafka(self, service, repo, kafka):
         track_id = uuid.uuid4()
 
-        service.delete_track(track_id)
+        await service.delete_track(track_id)
 
         repo.delete_track.assert_called_once_with(track_id)
         kafka.send_delete_track.assert_called_once_with(track_id)
 
-    def test_raises_service_error_when_not_found(self, service, repo, kafka):
+    @pytest.mark.asyncio
+    async def test_raises_service_error_when_not_found(self, service, repo, kafka):
         repo.delete_track.side_effect = adapter_errors.TrackNotFoundError
 
         with pytest.raises(service_errors.TrackNotFoundError):
-            service.delete_track(uuid.uuid4())
+            await service.delete_track(uuid.uuid4())
 
         kafka.send_delete_track.assert_not_called()
 
 
 class TestGetTrack:
-    def test_returns_track(self, service, repo):
+    @pytest.mark.asyncio
+    async def test_returns_track(self, service, repo):
         track = make_track()
         repo.get_track.return_value = track
 
-        result = service.get_track(track.id)
+        result = await service.get_track(track.id)
 
         assert result == track
         repo.get_track.assert_called_once_with(track.id)
 
-    def test_raises_track_not_found(self, service, repo):
+    @pytest.mark.asyncio
+    async def test_raises_track_not_found(self, service, repo):
         repo.get_track.side_effect = adapter_errors.TrackNotFoundError
 
         with pytest.raises(service_errors.TrackNotFoundError):
-            service.get_track(uuid.uuid4())
+            await service.get_track(uuid.uuid4())
 
-    def test_raises_role_not_found(self, service, repo):
+    @pytest.mark.asyncio
+    async def test_raises_role_not_found(self, service, repo):
         repo.get_track.side_effect = adapter_errors.RoleNotFoundError
 
         with pytest.raises(service_errors.RoleNotFoundError):
-            service.get_track(uuid.uuid4())
+            await service.get_track(uuid.uuid4())
 
 
 class TestGetTracksByEventId:
-    def test_returns_tracks(self, service, repo):
+    @pytest.mark.asyncio
+    async def test_returns_tracks(self, service, repo):
         event_id = uuid.uuid4()
         tracks = [make_track(event_id=event_id), make_track(event_id=event_id)]
         repo.get_tracks_by_event_id.return_value = tracks
 
-        result = service.get_tracks_by_event_id(event_id)
+        result = await service.get_tracks_by_event_id(event_id)
 
         assert result == tracks
         repo.get_tracks_by_event_id.assert_called_once_with(event_id)
 
-    def test_raises_event_not_found(self, service, repo):
+    @pytest.mark.asyncio
+    async def test_raises_event_not_found(self, service, repo):
         repo.get_tracks_by_event_id.side_effect = adapter_errors.EventNotFoundError
 
         with pytest.raises(service_errors.EventNotFoundError):
-            service.get_tracks_by_event_id(uuid.uuid4())
+            await service.get_tracks_by_event_id(uuid.uuid4())
 
-    def test_raises_role_not_found(self, service, repo):
+    @pytest.mark.asyncio
+    async def test_raises_role_not_found(self, service, repo):
         repo.get_tracks_by_event_id.side_effect = adapter_errors.RoleNotFoundError
 
         with pytest.raises(service_errors.RoleNotFoundError):
-            service.get_tracks_by_event_id(uuid.uuid4())
+            await service.get_tracks_by_event_id(uuid.uuid4())

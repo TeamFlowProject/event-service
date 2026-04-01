@@ -1,4 +1,4 @@
-CREATE_TASK_QUERY = """
+CREATE_TRACK_QUERY = """
     INSERT INTO tracks
     (
         id,
@@ -85,10 +85,12 @@ UPDATE_TRACKS_QUERY = """
         status = %(status)s,
         registration_deadline = %(registration_deadline)s
     WHERE id = %(id)s
+    RETURNING id
 """
 DELETE_TRACKS_QUERY = """
     DELETE FROM tracks
     WHERE id = %(id)s
+    RETURNING id
 """
 DELETE_ROLES_QUERY = """
     DELETE FROM roles

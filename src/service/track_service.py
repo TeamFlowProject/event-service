@@ -35,7 +35,7 @@ class TrackService:
 
         return track.id
 
-    async def update_track(self, track: Track):
+    async def update_track(self, track: Track) -> None:
         """
         Update an existing track
 
@@ -54,7 +54,7 @@ class TrackService:
         except adapter_errors.TrackNotFoundError as e:
             raise service_errors.TrackNotFoundError("Failed to update track") from e
 
-    async def delete_track(self, id: uuid.UUID):
+    async def delete_track(self, id: uuid.UUID) -> None:
         """
         Delete an existing track
 
@@ -71,7 +71,7 @@ class TrackService:
         except adapter_errors.TrackNotFoundError as e:
             raise service_errors.TrackNotFoundError("Failed to delete track") from e
 
-    async def get_track(self, id: uuid.UUID):
+    async def get_track(self, id: uuid.UUID) -> Track:
         """
         Get a track by ID
 
@@ -93,7 +93,7 @@ class TrackService:
         except adapter_errors.RoleNotFoundError as e:
             raise service_errors.RoleNotFoundError("Failed to get track") from e
 
-    async def get_tracks_by_event_id(self, event_id: uuid.UUID):
+    async def get_tracks_by_event_id(self, event_id: uuid.UUID) -> list[Track]:
         """
         Get all tracks for an event
 

@@ -1,9 +1,12 @@
-import psycopg_pool
 import uuid
+
+
+import psycopg.rows
+import psycopg_pool
 
 from src.models.track import Track, Role
 from src.adapters.repository.postgres.queries import (
-    CREATE_TASK_QUERY,
+    CREATE_TRACK_QUERY,
     CREATE_ROLES_QUERY,
     UPSERT_ROLES_QUERY,
     DELETE_STALE_ROLES_QUERY,
@@ -16,6 +19,7 @@ from src.adapters.repository.postgres.queries import (
     SELECT_ROLES_BY_EVENT_ID_QUERY,
 )
 from src.adapters.repository.errors import TrackNotFoundError
+from .models import TrackRow, RoleRow
 
 
 class TrackPostgresRepository:
@@ -34,14 +38,15 @@ class TrackPostgresRepository:
             async with conn.transaction():
                 async with conn.cursor() as cursor:
                     await cursor.execute(
-                        CREATE_TASK_QUERY,
+                        CREATE_TRACK_QUERY,
                         track.__dict__,
                     )
 
-                    await cursor.executemany(
-                        CREATE_ROLES_QUERY,
-                        [role.__dict__ for role in track.required_roles],
-                    )
+                    if track.required_roles:
+                        await cursor.executemany(
+                            CREATE_ROLES_QUERY,
+                            [role.__dict__ for role in track.required_roles],
+                        )
 
     async def update_track(self, track: Track):
         """
@@ -60,17 +65,19 @@ class TrackPostgresRepository:
         async with self._pool.connection() as conn:
             async with conn.transaction():
                 async with conn.cursor() as cursor:
+                    await cursor.execute(
+                        UPDATE_TRACKS_QUERY,
+                        track.__dict__,
+                    )
+                    if await cursor.fetchone() is None:
+                        raise TrackNotFoundError(f"Track with id {track.id} not found")
+
                     if role_dicts:
                         await cursor.executemany(UPSERT_ROLES_QUERY, role_dicts)
 
                     await cursor.execute(
                         DELETE_STALE_ROLES_QUERY,
                         {"track_id": str(track.id), "ids": role_ids},
-                    )
-
-                    await cursor.execute(
-                        UPDATE_TRACKS_QUERY,
-                        track.__dict__,
                     )
 
     async def delete_track(self, id: uuid.UUID):
@@ -93,6 +100,8 @@ class TrackPostgresRepository:
                         DELETE_TRACKS_QUERY,
                         {"id": str(id)},
                     )
+                    if await cursor.fetchone() is None:
+                        raise TrackNotFoundError(f"Track with id {id} not found")
 
     async def get_track(self, id: uuid.UUID) -> Track:
         """
@@ -106,42 +115,41 @@ class TrackPostgresRepository:
         """
 
         async with self._pool.connection() as conn:
-            async with conn.cursor() as cursor:
-                await cursor.execute(
-                    SELECT_TRACKS_QUERY,
-                    {"id": str(id)},
-                )
-                row = await cursor.fetchone()
+            async with conn.cursor(
+                row_factory=psycopg.rows.class_row(TrackRow)
+            ) as track_cursor:
+                await track_cursor.execute(SELECT_TRACKS_QUERY, {"id": str(id)})
+                row = await track_cursor.fetchone()
                 if row is None:
                     raise TrackNotFoundError(f"Track with id {id} not found")
 
-                await cursor.execute(
-                    SELECT_ROLES_QUERY,
-                    {"track_id": str(id)},
-                )
+            async with conn.cursor(
+                row_factory=psycopg.rows.class_row(RoleRow)
+            ) as role_cursor:
+                await role_cursor.execute(SELECT_ROLES_QUERY, {"track_id": str(id)})
                 roles = [
                     Role(
-                        id=role[0],
-                        track_id=role[1],
-                        name=role[2],
-                        description=role[3],
-                        count=role[4],
+                        id=role.id,
+                        track_id=role.track_id,
+                        name=role.name,
+                        description=role.description,
+                        count=role.count,
                     )
-                    for role in await cursor.fetchall()
+                    for role in await role_cursor.fetchall()
                 ]
 
                 return Track(
-                    id=row[0],
-                    event_id=row[1],
-                    name=row[2],
-                    description=row[3],
-                    max_team_count=row[4],
-                    max_participants_count=row[5],
-                    min_team_size=row[6],
-                    max_team_size=row[7],
-                    requirements=row[8],
-                    status=row[9],
-                    registration_deadline=row[10],
+                    id=row.id,
+                    event_id=row.event_id,
+                    name=row.name,
+                    description=row.description,
+                    max_team_count=row.max_team_count,
+                    max_participants_count=row.max_participants_count,
+                    min_team_size=row.min_team_size,
+                    max_team_size=row.max_team_size,
+                    requirements=row.requirements,
+                    status=row.status,
+                    registration_deadline=row.registration_deadline,
                     required_roles=roles,
                 )
 
@@ -157,44 +165,48 @@ class TrackPostgresRepository:
         """
 
         async with self._pool.connection() as conn:
-            async with conn.cursor() as cursor:
-                await cursor.execute(
+            async with conn.cursor(
+                row_factory=psycopg.rows.class_row(TrackRow)
+            ) as track_cursor:
+                await track_cursor.execute(
                     SELECT_TRACKS_BY_EVENT_ID_QUERY,
                     {"event_id": str(event_id)},
                 )
-                rows = await cursor.fetchall()
+                rows = await track_cursor.fetchall()
 
-                await cursor.execute(
+            async with conn.cursor(
+                row_factory=psycopg.rows.class_row(RoleRow)
+            ) as role_cursor:
+                await role_cursor.execute(
                     SELECT_ROLES_BY_EVENT_ID_QUERY,
                     {"event_id": str(event_id)},
                 )
-                roles_by_track: dict[str, list[Role]] = {}
-                for role in await cursor.fetchall():
-                    track_id_str = str(role[1])
-                    roles_by_track.setdefault(track_id_str, []).append(
+                roles_by_track: dict[uuid.UUID, list[Role]] = {}
+                for role in await role_cursor.fetchall():
+                    roles_by_track.setdefault(role.track_id, []).append(
                         Role(
-                            id=role[0],
-                            track_id=role[1],
-                            name=role[2],
-                            description=role[3],
-                            count=role[4],
+                            id=role.id,
+                            track_id=role.track_id,
+                            name=role.name,
+                            description=role.description,
+                            count=role.count,
                         )
                     )
 
                 return [
                     Track(
-                        id=row[0],
-                        event_id=row[1],
-                        name=row[2],
-                        description=row[3],
-                        max_team_count=row[4],
-                        max_participants_count=row[5],
-                        min_team_size=row[6],
-                        max_team_size=row[7],
-                        requirements=row[8],
-                        status=row[9],
-                        registration_deadline=row[10],
-                        required_roles=roles_by_track.get(str(row[0]), []),
+                        id=row.id,
+                        event_id=row.event_id,
+                        name=row.name,
+                        description=row.description,
+                        max_team_count=row.max_team_count,
+                        max_participants_count=row.max_participants_count,
+                        min_team_size=row.min_team_size,
+                        max_team_size=row.max_team_size,
+                        requirements=row.requirements,
+                        status=row.status,
+                        registration_deadline=row.registration_deadline,
+                        required_roles=roles_by_track.get(row.id, []),
                     )
                     for row in rows
                 ]
