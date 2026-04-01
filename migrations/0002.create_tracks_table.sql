@@ -1,3 +1,5 @@
+-- depends: 0001.create_events_table
+
 CREATE TYPE track_status AS ENUM ('DRAFT', 'OPEN', 'FULL', 'CLOSED');
 
 CREATE TABLE IF NOT EXISTS tracks (

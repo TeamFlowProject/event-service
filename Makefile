@@ -3,7 +3,7 @@ MIGRATIONS_DIR = migrations
 
 .PHONY: run
 run:
-	python -m src.main
+	python -m src.main run
 
 .PHONY: test
 test:
@@ -11,12 +11,12 @@ test:
 
 .PHONY: migrate-up
 migrate-up:
-	migrate -path $(MIGRATIONS_DIR) -database "$(DB_DSN)" up
+	python -m src.main migrate
 
 .PHONY: migrate-down
 migrate-down:
-	migrate -path $(MIGRATIONS_DIR) -database "$(DB_DSN)" down 1
+	python -m src.main migrate-down
 
 .PHONY: migrate-drop
 migrate-drop:
-	migrate -path $(MIGRATIONS_DIR) -database "$(DB_DSN)" drop -f
+	python -m src.main migrate-drop

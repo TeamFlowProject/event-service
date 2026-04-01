@@ -1,0 +1,9 @@
+-- depends: 0002.create_tracks_table
+
+CREATE TABLE IF NOT EXISTS roles (
+    id          UUID PRIMARY KEY,
+    track_id    UUID NOT NULL REFERENCES tracks(id) ON DELETE CASCADE,
+    name        VARCHAR(255) NOT NULL,
+    description TEXT NOT NULL,
+    count       INTEGER NOT NULL
+);
