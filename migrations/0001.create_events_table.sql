@@ -1,0 +1,5 @@
+-- depends:
+
+CREATE TABLE IF NOT EXISTS events (
+    id UUID PRIMARY KEY
+);
