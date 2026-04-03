@@ -268,6 +268,7 @@ class TestGetParticipants:
     @pytest.mark.asyncio
     async def test_raises_event_not_found(self, service, repo):
         repo.get_participants_by_id.side_effect = adapter_errors.EventNotFoundError
+
         with pytest.raises(service_errors.EventNotFoundError):
             await service.get_participants(event_id=uuid.uuid4(), participant_id=uuid.uuid4())
 
