@@ -1,16 +1,21 @@
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
+    model_config = SettingsConfigDict(
+        env_file=".env", env_file_encoding="utf-8", populate_by_name=True
+    )
 
-    database_dsn: str = "postgresql://user:password@localhost:5432/event_db"
-    database_min_connections: int = 1
-    database_max_connections: int = 10
-    kafka_bootstrap: str = "localhost:9092"
-    http_host: str = "0.0.0.0"
-    http_port: int = 8001
-    kafka_topic_commands: str = "event-commands"
-    kafka_topic_events: str = "event-events"
-    kafka_group_id: str = "event-service"
-    log_level: str = "INFO"
+    database_dsn: str = Field(
+        "postgresql://user:password@localhost:5432/event_db", alias="DATABASE_DSN"
+    )
+    database_min_connections: int = Field(1, alias="DATABASE_MIN_CONNECTIONS")
+    database_max_connections: int = Field(10, alias="DATABASE_MAX_CONNECTIONS")
+    kafka_bootstrap: str = Field("localhost:9092", alias="KAFKA_BOOTSTRAP")
+    http_host: str = Field("0.0.0.0", alias="HTTP_HOST")
+    http_port: int = Field(8001, alias="HTTP_PORT")
+    kafka_topic_commands: str = Field("event-commands", alias="KAFKA_TOPIC_COMMANDS")
+    kafka_topic_events: str = Field("event-events", alias="KAFKA_TOPIC_EVENTS")
+    kafka_group_id: str = Field("event-service", alias="KAFKA_GROUP_ID")
+    log_level: str = Field("INFO", alias="LOG_LEVEL")
