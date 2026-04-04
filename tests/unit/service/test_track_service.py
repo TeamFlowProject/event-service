@@ -44,6 +44,7 @@ def service(repo, kafka):
     return TrackService(track_repository=repo, kafka_producer=kafka)
 
 
+@pytest.mark.unit
 class TestCreateTrack:
     @pytest.mark.asyncio
     async def test_returns_id(self, service):
@@ -63,6 +64,7 @@ class TestCreateTrack:
         kafka.send_create_track.assert_called_once()
 
 
+@pytest.mark.unit
 class TestUpdateTrack:
     @pytest.mark.asyncio
     async def test_calls_repo_and_kafka(self, service, repo, kafka):
@@ -83,6 +85,7 @@ class TestUpdateTrack:
         kafka.send_update_track.assert_not_called()
 
 
+@pytest.mark.unit
 class TestDeleteTrack:
     @pytest.mark.asyncio
     async def test_calls_repo_and_kafka(self, service, repo, kafka):
@@ -103,6 +106,7 @@ class TestDeleteTrack:
         kafka.send_delete_track.assert_not_called()
 
 
+@pytest.mark.unit
 class TestGetTrack:
     @pytest.mark.asyncio
     async def test_returns_track(self, service, repo):
@@ -129,6 +133,7 @@ class TestGetTrack:
             await service.get_track(uuid.uuid4())
 
 
+@pytest.mark.unit
 class TestGetTracksByEventId:
     @pytest.mark.asyncio
     async def test_returns_tracks(self, service, repo):

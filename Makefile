@@ -5,8 +5,12 @@ MIGRATIONS_DIR = migrations
 run:
 	python -m src.main run
 
-.PHONY: test
-test:
+.PHONY: unit-test
+unit-test:
+	uv run pytest --cov=src -m unit
+
+.PHONY: integration-test
+integration-test:
 	uv run pytest --cov=src
 
 .PHONY: migrate-up
