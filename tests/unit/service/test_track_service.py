@@ -54,17 +54,6 @@ class TestCreateTrack:
         assert isinstance(result, uuid.UUID)
 
     @pytest.mark.asyncio
-    async def test_sets_new_track_id(self, service, kafka):
-        track = make_track()
-        original_id = track.id
-
-        result = await service.create_track(track)
-
-        assert result != original_id
-        sent_track = kafka.send_create_track.call_args[0][0]
-        assert sent_track.id == result
-
-    @pytest.mark.asyncio
     async def test_calls_repo_and_kafka(self, service, repo, kafka):
         track = make_track()
 

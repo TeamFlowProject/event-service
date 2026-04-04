@@ -28,8 +28,6 @@ class TrackService:
             TrackNotFoundError: If the track could not be created
         """
 
-        track.id = uuid.uuid4()
-
         await self._track_repository.create_track(track)
         await self._kafka_producer.send_create_track(track)
 
