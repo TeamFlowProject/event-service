@@ -93,6 +93,7 @@ def _make_track(event_id: uuid.UUID) -> Track:
     )
 
 
+@pytest.mark.integration
 @pytest.mark.usefixtures("cleanup")
 class TestTrackPostgresRepository:
 

@@ -19,6 +19,12 @@ dependencies = [
     "psycopg-pool>=3.3.0",
 ]
 
+[tool.pytest.ini_options]
+markers = [
+    "unit: marks tests as unit tests",
+    "integration: marks tests as integration tests",
+]
+
 [dependency-groups]
 dev = [
     "pytest>=9.0.2",
