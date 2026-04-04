@@ -58,6 +58,7 @@ def service(repo, kafka):
     return EventService(event_repository=repo, kafka_producer=kafka)
 
 
+@pytest.mark.unit
 class TestGetEventById:
     @pytest.mark.asyncio
     async def test_returns_event(self, service, repo):
@@ -77,6 +78,7 @@ class TestGetEventById:
             await service.get_event_by_id(uuid.uuid4())
 
 
+@pytest.mark.unit
 class TestGetEventsPage:
     @pytest.mark.asyncio
     async def test_returns_events_by_id(self, service, repo):
@@ -111,6 +113,7 @@ class TestGetEventsPage:
             await service.get_events_page(event_id=uuid.uuid4(), offset=0)
 
 
+@pytest.mark.unit
 class TestCreateEvent:
     @pytest.mark.asyncio
     async def test_returns_id(self, service):
@@ -141,6 +144,7 @@ class TestCreateEvent:
         kafka.send_create_event.assert_called_once()
 
 
+@pytest.mark.unit
 class TestUpdateEvent:
     @pytest.mark.asyncio
     async def test_calls_repo_and_kafka(self, service, repo, kafka):
@@ -161,6 +165,7 @@ class TestUpdateEvent:
         kafka.send_update_event.assert_not_called()
 
 
+@pytest.mark.unit
 class TestDeleteEvent:
     @pytest.mark.asyncio
     async def test_calls_repo_and_kafka(self, service, repo, kafka):
@@ -181,6 +186,7 @@ class TestDeleteEvent:
         kafka.send_delete_event.assert_not_called()
 
 
+@pytest.mark.unit
 class TestAddParticipant:
     @pytest.mark.asyncio
     async def test_adds_participant_when_event_open(self, service, repo, kafka):
@@ -207,7 +213,7 @@ class TestAddParticipant:
         assert sent_participant_id == participant.id
 
     @pytest.mark.asyncio
-    async def test_raises_error_when_event_not_open(self, service, repo):
+    async def test_raises_error_when_event_not_open(self, service, repo, kafka):
         event = make_event(status=EventStatusEnum.CLOSED)
         participant = make_participant()
         repo.get_event_by_id.return_value = event
@@ -229,6 +235,7 @@ class TestAddParticipant:
         repo.add_participant.assert_not_called()
 
 
+@pytest.mark.unit
 class TestGetParticipants:
     @pytest.mark.asyncio
     async def test_returns_participants_by_id(self, service, repo):
@@ -237,19 +244,28 @@ class TestGetParticipants:
         repo.get_participants_by_id.return_value = [participant]
         participant_id = uuid.uuid4()
 
-        result = await service.get_participants(event_id=event_id, participant_id=participant_id, limit=10)
+        result = await service.get_participants(
+            event_id=event_id, participant_id=participant_id, limit=10
+        )
 
         assert result == [participant]
-        repo.get_participants_by_id.assert_called_once_with(event_id, participant_id, 10)
+        repo.get_participants_by_id.assert_called_once_with(
+            event_id, participant_id, 10
+        )
 
     @pytest.mark.asyncio
     async def test_returns_participants_by_offset(self, service, repo):
         event_id = uuid.uuid4()
-        participants = [make_participant(event_id=event_id), make_participant(event_id=event_id)]
+        participants = [
+            make_participant(event_id=event_id),
+            make_participant(event_id=event_id),
+        ]
         repo.get_participants_by_num.return_value = participants
         offset = 0
 
-        result = await service.get_participants(event_id=event_id, offset=offset, limit=10)
+        result = await service.get_participants(
+            event_id=event_id, offset=offset, limit=10
+        )
 
         assert result == participants
         repo.get_participants_by_num.assert_called_once_with(event_id, offset, 10)
@@ -259,25 +275,35 @@ class TestGetParticipants:
         event_id = uuid.uuid4()
 
         with pytest.raises(service_errors.PaginationError):
-            await service.get_participants(event_id=event_id, participant_id=None, offset=None)
+            await service.get_participants(
+                event_id=event_id, participant_id=None, offset=None
+            )
 
     @pytest.mark.asyncio
     async def test_raises_error_when_both_specified(self, service):
         event_id = uuid.uuid4()
 
         with pytest.raises(service_errors.PaginationError):
-            await service.get_participants(event_id=event_id, participant_id=uuid.uuid4(), offset=0)
+            await service.get_participants(
+                event_id=event_id, participant_id=uuid.uuid4(), offset=0
+            )
 
     @pytest.mark.asyncio
     async def test_raises_event_not_found(self, service, repo):
         repo.get_participants_by_id.side_effect = adapter_errors.EventNotFoundError
 
         with pytest.raises(service_errors.EventNotFoundError):
-            await service.get_participants(event_id=uuid.uuid4(), participant_id=uuid.uuid4())
+            await service.get_participants(
+                event_id=uuid.uuid4(), participant_id=uuid.uuid4()
+            )
 
     @pytest.mark.asyncio
     async def test_raises_participant_not_found(self, service, repo):
-        repo.get_participants_by_id.side_effect = adapter_errors.ParticipantNotFoundError
+        repo.get_participants_by_id.side_effect = (
+            adapter_errors.ParticipantNotFoundError
+        )
 
         with pytest.raises(service_errors.ParticipantNotFoundError):
-            await service.get_participants(event_id=uuid.uuid4(), participant_id=uuid.uuid4())
+            await service.get_participants(
+                event_id=uuid.uuid4(), participant_id=uuid.uuid4()
+            )

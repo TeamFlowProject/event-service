@@ -37,7 +37,7 @@ class EventService:
         self,
         event_id: Optional[uuid.UUID] = None,
         offset: Optional[int] = None,
-        limit: int = 10
+        limit: int = 10,
     ) -> list[Event]:
         """
         Get events with pagination
@@ -55,13 +55,21 @@ class EventService:
         Raises:
             PaginationError: If both or neither of event_id and offset are specified
         """
-        if (event_id is None) == (offset is None):
-            raise service_errors.PaginationError("Event id or offset must be specified") from None
+        if (event_id is not None) and (offset is not None):
+            raise service_errors.PaginationError(
+                "Event id or offset must be specified"
+            ) from None
 
         if event_id:
-            return await self._event_repository.get_events_page_by_id(event_id=event_id, limit=limit)
-        else:
-            return await self._event_repository.get_events_page_by_num(offset=offset, limit=limit)
+            return await self._event_repository.get_events_page_by_id(
+                event_id=event_id, limit=limit
+            )
+        if offset is not None:
+            return await self._event_repository.get_events_page_by_num(
+                offset=offset, limit=limit
+            )
+
+        raise service_errors.PaginationError("Offset or id must be specified")
 
     async def create_event(self, event: Event) -> uuid.UUID:
         """
@@ -117,7 +125,9 @@ class EventService:
         except adapter_errors.EventNotFoundError as e:
             raise service_errors.EventNotFoundError("Failed to delete event") from e
 
-    async def add_participant(self, event_id: uuid.UUID, participant: Participant) -> None:
+    async def add_participant(
+        self, event_id: uuid.UUID, participant: Participant
+    ) -> None:
         """
         Add a participant to an event
 
@@ -134,7 +144,7 @@ class EventService:
 
         if event.status == EventStatusEnum.OPEN:
             await self._event_repository.add_participant(event_id, participant)
-            await self._kafka_producer.send_participant(event_id, participant.id)
+            await self._kafka_producer.send_participant(event, participant.id)
         else:
             raise service_errors.ParticipantError("Failed to add participant") from None
 
@@ -143,7 +153,7 @@ class EventService:
         event_id: uuid.UUID,
         offset: Optional[int] = None,
         participant_id: Optional[uuid.UUID] = None,
-        limit: int = 10
+        limit: int = 10,
     ) -> list[Participant]:
         """
         Get participants for an event
@@ -166,15 +176,25 @@ class EventService:
             EventNotFoundError: If the event could not be found
             ParticipantNotFoundError: If the participant could not be found
         """
-        if (participant_id is None) == (offset is None):
-            raise service_errors.PaginationError("Participant id or offset must be specified") from None
+        if (participant_id is not None) and (offset is not None):
+            raise service_errors.PaginationError(
+                "Participant id or offset must be specified"
+            ) from None
 
         try:
             if participant_id:
-                return await self._event_repository.get_participants_by_id(event_id, participant_id, limit)
-            else:
-                return await self._event_repository.get_participants_by_num(event_id, offset, limit)
+                return await self._event_repository.get_participants_by_id(
+                    event_id, participant_id, limit
+                )
+            if offset is not None:
+                return await self._event_repository.get_participants_by_num(
+                    event_id, offset, limit
+                )
+            raise service_errors.PaginationError("Participant id or offset must be specified") from None
+
         except adapter_errors.EventNotFoundError as e:
             raise service_errors.EventNotFoundError("Failed to get participant") from e
         except adapter_errors.ParticipantNotFoundError as e:
-            raise service_errors.ParticipantNotFoundError("Failed to get participant") from e
+            raise service_errors.ParticipantNotFoundError(
+                "Failed to get participant"
+            ) from e

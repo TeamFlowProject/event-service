@@ -10,6 +10,7 @@ class EventStatusEnum(str, Enum):
     FULL = "FULL"
     CLOSED = "CLOSED"
 
+
 class EventTypeEnum(str, Enum):
     HACKATHON = "HACKATHON"
     PRACTICE = "PRACTICE"
