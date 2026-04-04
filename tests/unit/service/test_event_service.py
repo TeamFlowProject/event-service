@@ -6,7 +6,7 @@ import pytest
 
 import src.adapters.repository.errors as adapter_errors
 import src.service.errors as service_errors
-from src.models.event import Event, Participant, EventStatusEnum
+from src.models.event import Event, Participant, EventStatusEnum, EventTypeEnum
 from src.service.event_service import EventService
 
 
@@ -15,14 +15,16 @@ def make_event(**kwargs) -> Event:
         id=uuid.uuid4(),
         name="Test Event",
         description="A test event",
-        format="ONLINE",
-        start=datetime(2026, 6, 15, 10, 0),
-        end=datetime(2026, 6, 17, 18, 0),
+        type=EventTypeEnum.HACKATHON,
         registration_start=datetime(2026, 5, 1, 0, 0),
         registration_end=datetime(2026, 6, 10, 23, 59),
-        capacity=100,
-        status=EventStatusEnum.DRAFT,
+        holding_start=datetime(2026, 6, 15, 10, 0),
+        holding_end=datetime(2026, 6, 17, 18, 0),
         created_at=datetime.now(),
+        organizers=["Organizer 1", "Organizer 2"],
+        rules="No cheating",
+        FAQ="FAQ content",
+        status=EventStatusEnum.DRAFT,
     )
     defaults.update(kwargs)
     return Event(**defaults)  # type: ignore
@@ -32,9 +34,10 @@ def make_participant(**kwargs) -> Participant:
     defaults = dict(
         id=uuid.uuid4(),
         event_id=uuid.uuid4(),
-        user_id=uuid.uuid4(),
-        status="REGISTERED",
-        registered_at=datetime.now(),
+        name="John",
+        surname="Doe",
+        patronymic="Johnovich",
+        have_team=False,
     )
     defaults.update(kwargs)
     return Participant(**defaults)  # type: ignore

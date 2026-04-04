@@ -148,16 +148,18 @@ class EventService:
         """
         Get participants for an event
 
-        Supports two modes: get single participant by ID or get list with offset pagination
+        Supports two modes:
+        - Get participant by ID (returns list with single participant)
+        - Get list of participants with offset pagination
 
         Args:
             event_id (uuid.UUID): The ID of the event to get participants for
-            offset (Optional[int]): Number of participants to skip
-            participant_id (Optional[uuid.UUID]): The ID of the participant to get
+            offset (Optional[int]): Number of participants to skip (for pagination mode)
+            participant_id (Optional[uuid.UUID]): The ID of the participant to get (for single lookup)
             limit (int): Maximum number of participants to return
 
         Returns:
-            list[Participant]: The participants matching the criteria
+            list[Participant]: List of participants (single item in ID mode, multiple in pagination mode)
 
         Raises:
             PaginationError: If both or neither of participant_id and offset are specified

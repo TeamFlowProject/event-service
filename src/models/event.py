@@ -20,7 +20,7 @@ class Event:
     id: uuid.UUID
     name: str
     description: str
-    type: EventStatusEnum
+    type: EventTypeEnum
 
     registration_start: datetime
     registration_end: datetime
@@ -31,7 +31,6 @@ class Event:
     organizers: list[str]
     rules: str
     FAQ: str
-    is_public: bool
     status: EventStatusEnum
 
 
