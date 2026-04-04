@@ -25,6 +25,10 @@ markers = [
     "integration: marks tests as integration tests",
 ]
 
+[tool.pyright]
+venvPath = "."
+venv = ".venv"
+
 [dependency-groups]
 dev = [
     "pytest>=9.0.2",

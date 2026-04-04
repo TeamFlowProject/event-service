@@ -24,3 +24,17 @@ migrate-down:
 .PHONY: migrate-drop
 migrate-drop:
 	python -m src.main migrate-drop
+
+.PHONY: install-tools
+install-tools:
+	uv tool install pyright
+	uv tool install ruff
+
+.PHONY: lint
+lint:
+	uv tool run pyright .
+	uv tool run ruff check .
+
+.PHONY: lint-fix
+lint-fix:
+	uv run ruff --fix .
