@@ -45,9 +45,7 @@ async def repository(pool):
 async def event_id(pool):
     eid = uuid.uuid4()
     async with pool.connection() as conn:
-        await conn.execute(
-            "INSERT INTO events (id) VALUES (%s)", (str(eid),)
-        )
+        await conn.execute("INSERT INTO events (id) VALUES (%s)", (str(eid),))
     return eid
 
 
@@ -96,7 +94,6 @@ def _make_track(event_id: uuid.UUID) -> Track:
 @pytest.mark.integration
 @pytest.mark.usefixtures("cleanup")
 class TestTrackPostgresRepository:
-
     @pytest.mark.asyncio
     async def test_create_and_get_track(self, repository, event_id):
         track = _make_track(event_id)
