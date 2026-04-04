@@ -125,13 +125,6 @@ class TestGetTrack:
         with pytest.raises(service_errors.TrackNotFoundError):
             await service.get_track(uuid.uuid4())
 
-    @pytest.mark.asyncio
-    async def test_raises_role_not_found(self, service, repo):
-        repo.get_track.side_effect = adapter_errors.RoleNotFoundError
-
-        with pytest.raises(service_errors.RoleNotFoundError):
-            await service.get_track(uuid.uuid4())
-
 
 @pytest.mark.unit
 class TestGetTracksByEventId:
@@ -151,11 +144,4 @@ class TestGetTracksByEventId:
         repo.get_tracks_by_event_id.side_effect = adapter_errors.EventNotFoundError
 
         with pytest.raises(service_errors.EventNotFoundError):
-            await service.get_tracks_by_event_id(uuid.uuid4())
-
-    @pytest.mark.asyncio
-    async def test_raises_role_not_found(self, service, repo):
-        repo.get_tracks_by_event_id.side_effect = adapter_errors.RoleNotFoundError
-
-        with pytest.raises(service_errors.RoleNotFoundError):
             await service.get_tracks_by_event_id(uuid.uuid4())

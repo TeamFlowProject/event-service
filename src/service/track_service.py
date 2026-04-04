@@ -88,8 +88,6 @@ class TrackService:
             return await self._track_repository.get_track(id)
         except adapter_errors.TrackNotFoundError as e:
             raise service_errors.TrackNotFoundError("Failed to get track") from e
-        except adapter_errors.RoleNotFoundError as e:
-            raise service_errors.RoleNotFoundError("Failed to get track") from e
 
     async def get_tracks_by_event_id(self, event_id: uuid.UUID) -> list[Track]:
         """
@@ -110,5 +108,3 @@ class TrackService:
             return await self._track_repository.get_tracks_by_event_id(event_id)
         except adapter_errors.EventNotFoundError as e:
             raise service_errors.EventNotFoundError("Failed to get tracks") from e
-        except adapter_errors.RoleNotFoundError as e:
-            raise service_errors.RoleNotFoundError("Failed to get tracks") from e

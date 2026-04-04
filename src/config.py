@@ -8,14 +8,17 @@ class Settings(BaseSettings):
     )
 
     database_dsn: str = Field(
-        "postgresql://user:password@localhost:5432/event_db", alias="DATABASE_DSN"
+        default="postgresql://user:password@localhost:5432/event_db",
+        alias="DATABASE_DSN",
     )
-    database_min_connections: int = Field(1, alias="DATABASE_MIN_CONNECTIONS")
-    database_max_connections: int = Field(10, alias="DATABASE_MAX_CONNECTIONS")
-    kafka_bootstrap: str = Field("localhost:9092", alias="KAFKA_BOOTSTRAP")
-    http_host: str = Field("0.0.0.0", alias="HTTP_HOST")
-    http_port: int = Field(8001, alias="HTTP_PORT")
-    kafka_topic_commands: str = Field("event-commands", alias="KAFKA_TOPIC_COMMANDS")
-    kafka_topic_events: str = Field("event-events", alias="KAFKA_TOPIC_EVENTS")
-    kafka_group_id: str = Field("event-service", alias="KAFKA_GROUP_ID")
-    log_level: str = Field("INFO", alias="LOG_LEVEL")
+    database_min_connections: int = Field(default=1, alias="DATABASE_MIN_CONNECTIONS")
+    database_max_connections: int = Field(default=10, alias="DATABASE_MAX_CONNECTIONS")
+    kafka_bootstrap: str = Field(default="localhost:9092", alias="KAFKA_BOOTSTRAP")
+    http_host: str = Field(default="0.0.0.0", alias="HTTP_HOST")
+    http_port: int = Field(default=8001, alias="HTTP_PORT")
+    kafka_topic_commands: str = Field(
+        default="event-commands", alias="KAFKA_TOPIC_COMMANDS"
+    )
+    kafka_topic_events: str = Field(default="event-events", alias="KAFKA_TOPIC_EVENTS")
+    kafka_group_id: str = Field(default="event-service", alias="KAFKA_GROUP_ID")
+    log_level: str = Field(default="INFO", alias="LOG_LEVEL")

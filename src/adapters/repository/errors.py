@@ -1,9 +1,6 @@
 class TrackNotFoundError(Exception): ...
 
 
-class RoleNotFoundError(Exception): ...
-
-
 class EventNotFoundError(Exception): ...
 
 

@@ -2,7 +2,7 @@ import uuid
 
 from fastapi import APIRouter, HTTPException
 
-from src.controller.http.track_schemas import (
+from src.controller.http.track.schemas import (
     CreateTrackRequest,
     TrackStatus,
     UpdateTrackRequest,
@@ -11,7 +11,7 @@ from src.controller.http.track_schemas import (
 )
 from src.models.track import Track as TrackModel, Role as RoleModel, TrackStatusEnum
 from src.service.track_service import TrackService
-from src.service.errors import TrackNotFoundError, RoleNotFoundError, EventNotFoundError
+from src.service.errors import TrackNotFoundError, EventNotFoundError
 
 
 def create_track_router(track_service: TrackService) -> APIRouter:
@@ -31,8 +31,6 @@ def create_track_router(track_service: TrackService) -> APIRouter:
             return _track_to_response(track)
         except TrackNotFoundError:
             raise HTTPException(status_code=404, detail="Track not found")
-        except RoleNotFoundError:
-            raise HTTPException(status_code=404, detail="Role not found")
 
     @router.get("/event/{event_id}/tracks", response_model=list[Track])
     async def get_tracks_by_event_id(event_id: uuid.UUID):
@@ -41,8 +39,6 @@ def create_track_router(track_service: TrackService) -> APIRouter:
             return [_track_to_response(track) for track in tracks]
         except EventNotFoundError:
             raise HTTPException(status_code=404, detail="Event not found")
-        except RoleNotFoundError:
-            raise HTTPException(status_code=404, detail="Role not found")
 
     @router.put("/track/{track_id}", status_code=204)
     async def update_track(track_id: uuid.UUID, request: UpdateTrackRequest):
@@ -51,8 +47,6 @@ def create_track_router(track_service: TrackService) -> APIRouter:
             await track_service.update_track(track)
         except TrackNotFoundError:
             raise HTTPException(status_code=404, detail="Track not found")
-        except RoleNotFoundError:
-            raise HTTPException(status_code=404, detail="Role not found")
 
     @router.delete("/track/{track_id}", status_code=204)
     async def delete_track(track_id: uuid.UUID):
