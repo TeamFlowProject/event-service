@@ -34,7 +34,9 @@ install-tools:
 lint:
 	uv tool run pyright .
 	uv tool run ruff check .
+	uv tool run ruff format --check .
 
 .PHONY: lint-fix
 lint-fix:
-	uv run ruff --fix .
+	uv tool run ruff check --fix .
+	uv tool run ruff format .
