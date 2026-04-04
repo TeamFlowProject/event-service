@@ -190,7 +190,9 @@ class EventService:
                 return await self._event_repository.get_participants_by_num(
                     event_id, offset, limit
                 )
-            raise service_errors.PaginationError("Participant id or offset must be specified") from None
+            raise service_errors.PaginationError(
+                "Participant id or offset must be specified"
+            ) from None
 
         except adapter_errors.EventNotFoundError as e:
             raise service_errors.EventNotFoundError("Failed to get participant") from e
