@@ -7,7 +7,7 @@ import pytest
 import src.adapters.repository.errors as adapter_errors
 import src.service.errors as service_errors
 from src.models.track import Track, TrackStatusEnum
-from src.service.track_service import TrackService
+from src.service.track.service import TrackService
 
 
 def make_track(**kwargs) -> Track:

@@ -10,7 +10,7 @@ from src.controller.http.track.schemas import (
     Role,
 )
 from src.models.track import Track as TrackModel, Role as RoleModel, TrackStatusEnum
-from src.service.track_service import TrackService
+from src.controller.http.track.protocols import TrackService
 from src.service.errors import TrackNotFoundError, EventNotFoundError
 
 

@@ -7,7 +7,7 @@ import pytest
 import src.adapters.repository.errors as adapter_errors
 import src.service.errors as service_errors
 from src.models.event import Event, Participant, EventStatusEnum, EventTypeEnum
-from src.service.event_service import EventService
+from src.service.event.service import EventService
 
 
 def make_event(**kwargs) -> Event:

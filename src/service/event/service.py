@@ -1,5 +1,5 @@
 from typing import Optional
-from src.service.protocols import EventRepository, KafkaProducer
+from src.service.event.protocols import EventRepository, KafkaProducer
 from src.models.event import Event, Participant, EventStatusEnum
 import src.adapters.repository.errors as adapter_errors
 import src.service.errors as service_errors

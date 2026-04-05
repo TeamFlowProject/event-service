@@ -1,6 +1,6 @@
 from aiokafka import AIOKafkaConsumer
 
-from src.service.event_service import EventService
+from src.controller.kafka.protocols import EventService
 
 
 class EventKafkaConsumer:
