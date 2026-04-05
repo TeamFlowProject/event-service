@@ -7,7 +7,7 @@ import pytest
 import src.adapters.repository.errors as adapter_errors
 import src.service.errors as service_errors
 from src.models.track import Track, TrackStatusEnum
-from src.service.track_service import TrackService
+from src.service.track.service import TrackService
 
 
 def make_track(**kwargs) -> Track:
@@ -44,6 +44,7 @@ def service(repo, kafka):
     return TrackService(track_repository=repo, kafka_producer=kafka)
 
 
+@pytest.mark.unit
 class TestCreateTrack:
     @pytest.mark.asyncio
     async def test_returns_id(self, service):
@@ -52,17 +53,6 @@ class TestCreateTrack:
         result = await service.create_track(track)
 
         assert isinstance(result, uuid.UUID)
-
-    @pytest.mark.asyncio
-    async def test_sets_new_track_id(self, service, kafka):
-        track = make_track()
-        original_id = track.id
-
-        result = await service.create_track(track)
-
-        assert result != original_id
-        sent_track = kafka.send_create_track.call_args[0][0]
-        assert sent_track.id == result
 
     @pytest.mark.asyncio
     async def test_calls_repo_and_kafka(self, service, repo, kafka):
@@ -74,6 +64,7 @@ class TestCreateTrack:
         kafka.send_create_track.assert_called_once()
 
 
+@pytest.mark.unit
 class TestUpdateTrack:
     @pytest.mark.asyncio
     async def test_calls_repo_and_kafka(self, service, repo, kafka):
@@ -94,6 +85,7 @@ class TestUpdateTrack:
         kafka.send_update_track.assert_not_called()
 
 
+@pytest.mark.unit
 class TestDeleteTrack:
     @pytest.mark.asyncio
     async def test_calls_repo_and_kafka(self, service, repo, kafka):
@@ -114,6 +106,7 @@ class TestDeleteTrack:
         kafka.send_delete_track.assert_not_called()
 
 
+@pytest.mark.unit
 class TestGetTrack:
     @pytest.mark.asyncio
     async def test_returns_track(self, service, repo):
@@ -132,14 +125,8 @@ class TestGetTrack:
         with pytest.raises(service_errors.TrackNotFoundError):
             await service.get_track(uuid.uuid4())
 
-    @pytest.mark.asyncio
-    async def test_raises_role_not_found(self, service, repo):
-        repo.get_track.side_effect = adapter_errors.RoleNotFoundError
 
-        with pytest.raises(service_errors.RoleNotFoundError):
-            await service.get_track(uuid.uuid4())
-
-
+@pytest.mark.unit
 class TestGetTracksByEventId:
     @pytest.mark.asyncio
     async def test_returns_tracks(self, service, repo):
@@ -157,11 +144,4 @@ class TestGetTracksByEventId:
         repo.get_tracks_by_event_id.side_effect = adapter_errors.EventNotFoundError
 
         with pytest.raises(service_errors.EventNotFoundError):
-            await service.get_tracks_by_event_id(uuid.uuid4())
-
-    @pytest.mark.asyncio
-    async def test_raises_role_not_found(self, service, repo):
-        repo.get_tracks_by_event_id.side_effect = adapter_errors.RoleNotFoundError
-
-        with pytest.raises(service_errors.RoleNotFoundError):
             await service.get_tracks_by_event_id(uuid.uuid4())

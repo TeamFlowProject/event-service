@@ -5,8 +5,12 @@ MIGRATIONS_DIR = migrations
 run:
 	python -m src.main run
 
-.PHONY: test
-test:
+.PHONY: unit-test
+unit-test:
+	uv run pytest --cov=src -m unit
+
+.PHONY: integration-test
+integration-test:
 	uv run pytest --cov=src
 
 .PHONY: migrate-up
@@ -20,3 +24,19 @@ migrate-down:
 .PHONY: migrate-drop
 migrate-drop:
 	python -m src.main migrate-drop
+
+.PHONY: install-tools
+install-tools:
+	uv tool install pyright
+	uv tool install ruff
+
+.PHONY: lint
+lint:
+	uv tool run pyright .
+	uv tool run ruff check .
+	uv tool run ruff format --check .
+
+.PHONY: lint-fix
+lint-fix:
+	uv tool run ruff check --fix .
+	uv tool run ruff format .

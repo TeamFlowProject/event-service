@@ -3,9 +3,6 @@ from src.models.track import Track
 import uuid
 
 
-class EventRepository(Protocol): ...
-
-
 class TrackRepository(Protocol):
     async def create_track(self, track: Track): ...
     async def update_track(self, track: Track) -> None: ...

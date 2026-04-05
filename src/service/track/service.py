@@ -1,4 +1,4 @@
-from src.service.protocols import KafkaProducer, TrackRepository
+from src.service.track.protocols import KafkaProducer, TrackRepository
 from src.models.track import Track
 import uuid
 import src.adapters.repository.errors as adapter_errors
@@ -28,8 +28,6 @@ class TrackService:
             TrackNotFoundError: If the track could not be created
         """
 
-        track.id = uuid.uuid4()
-
         await self._track_repository.create_track(track)
         await self._kafka_producer.send_create_track(track)
 
@@ -54,7 +52,7 @@ class TrackService:
         except adapter_errors.TrackNotFoundError as e:
             raise service_errors.TrackNotFoundError("Failed to update track") from e
 
-    async def delete_track(self, id: uuid.UUID) -> None:
+    async def delete_track(self, track_id: uuid.UUID) -> None:
         """
         Delete an existing track
 
@@ -66,12 +64,12 @@ class TrackService:
         """
 
         try:
-            await self._track_repository.delete_track(id)
-            await self._kafka_producer.send_delete_track(id)
+            await self._track_repository.delete_track(track_id)
+            await self._kafka_producer.send_delete_track(track_id)
         except adapter_errors.TrackNotFoundError as e:
             raise service_errors.TrackNotFoundError("Failed to delete track") from e
 
-    async def get_track(self, id: uuid.UUID) -> Track:
+    async def get_track(self, track_id: uuid.UUID) -> Track:
         """
         Get a track by ID
 
@@ -87,11 +85,9 @@ class TrackService:
         """
 
         try:
-            return await self._track_repository.get_track(id)
+            return await self._track_repository.get_track(track_id)
         except adapter_errors.TrackNotFoundError as e:
             raise service_errors.TrackNotFoundError("Failed to get track") from e
-        except adapter_errors.RoleNotFoundError as e:
-            raise service_errors.RoleNotFoundError("Failed to get track") from e
 
     async def get_tracks_by_event_id(self, event_id: uuid.UUID) -> list[Track]:
         """
@@ -112,5 +108,3 @@ class TrackService:
             return await self._track_repository.get_tracks_by_event_id(event_id)
         except adapter_errors.EventNotFoundError as e:
             raise service_errors.EventNotFoundError("Failed to get tracks") from e
-        except adapter_errors.RoleNotFoundError as e:
-            raise service_errors.RoleNotFoundError("Failed to get tracks") from e

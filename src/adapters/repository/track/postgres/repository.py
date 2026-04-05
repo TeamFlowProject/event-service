@@ -5,7 +5,7 @@ import psycopg.rows
 import psycopg_pool
 
 from src.models.track import Track, Role
-from src.adapters.repository.postgres.queries import (
+from src.adapters.repository.track.postgres.queries import (
     CREATE_TRACK_QUERY,
     CREATE_ROLES_QUERY,
     UPSERT_ROLES_QUERY,

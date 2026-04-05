@@ -7,14 +7,14 @@ from fastapi import FastAPI
 from loguru import logger
 
 from src.adapters.clients.kafka_producer import KafkaProducerClient
-from src.adapters.repository.postgres.event_repository import EventPostgresRepository
-from src.adapters.repository.postgres.track_repository import TrackPostgresRepository
+from src.adapters.repository.event.postgres.repository import EventPostgresRepository
+from src.adapters.repository.track.postgres.repository import TrackPostgresRepository
 from src.config import Settings
-from src.controller.http.event_router import create_event_router
-from src.controller.http.track_router import create_track_router
+from src.controller.http.event.router import create_event_router
+from src.controller.http.track.router import create_track_router
 from src.controller.kafka.event_consumer import EventKafkaConsumer
-from src.service.event_service import EventService
-from src.service.track_service import TrackService
+from src.service.event.service import EventService
+from src.service.track.service import TrackService
 
 
 async def run_application(settings: Settings) -> None:
