@@ -47,13 +47,13 @@ def service(team_repo, kafka_producer):
 
 
 @pytest.mark.unit
-class TestGetTeam:
+class TestGetTeams:
     @pytest.mark.asyncio
     async def test_returns_team(self, service, team_repo):
         team = make_team()
         team_repo.get_team.return_value = team
 
-        result = await service.get_team(team.id)
+        result = await service.get_teams(team.id)
 
         assert result == team
         team_repo.get_team.assert_called_once_with(team.id)
@@ -63,45 +63,7 @@ class TestGetTeam:
         team_repo.get_team.side_effect = adapter_errors.TeamNotFoundError
 
         with pytest.raises(service_errors.TeamNotFoundError):
-            await service.get_team(uuid.uuid4())
-
-
-@pytest.mark.unit
-class TestGetTeamsByEvent:
-    @pytest.mark.asyncio
-    async def test_returns_teams(self, service, team_repo):
-        teams = [make_team(), make_team()]
-        team_repo.get_teams_by_event.return_value = teams
-
-        result = await service.get_teams_by_event(uuid.uuid4())
-
-        assert result == teams
-
-    @pytest.mark.asyncio
-    async def test_raises_event_not_found(self, service, team_repo):
-        team_repo.get_teams_by_event.side_effect = adapter_errors.EventNotFoundError
-
-        with pytest.raises(service_errors.EventNotFoundError):
-            await service.get_teams_by_event(uuid.uuid4())
-
-
-@pytest.mark.unit
-class TestGetTeamsByUser:
-    @pytest.mark.asyncio
-    async def test_returns_teams(self, service, team_repo):
-        teams = [make_team(), make_team()]
-        team_repo.get_teams_by_user.return_value = teams
-
-        result = await service.get_teams_by_user(uuid.uuid4())
-
-        assert result == teams
-
-    @pytest.mark.asyncio
-    async def test_raises_user_not_found(self, service, team_repo):
-        team_repo.get_teams_by_user.side_effect = adapter_errors.UserNotFoundError
-
-        with pytest.raises(service_errors.UserNotFoundError):
-            await service.get_teams_by_user(uuid.uuid4())
+            await service.get_teams(uuid.uuid4())
 
 
 @pytest.mark.unit
@@ -109,7 +71,6 @@ class TestCreateTeam:
     @pytest.mark.asyncio
     async def test_returns_id(self, service, team_repo, kafka_producer):
         team = make_team()
-        team_repo.create_team.return_value = None
 
         result = await service.create_team(team)
 
@@ -164,24 +125,28 @@ class TestDeleteTeam:
 @pytest.mark.unit
 class TestLeaveTeam:
     @pytest.mark.asyncio
-    async def test_calls_remove_member_and_kafka(self, service, team_repo, kafka_producer):
+    async def test_calls_remove_member_and_kafka(
+        self, service, team_repo, kafka_producer
+    ):
         team_id = uuid.uuid4()
         user_id = uuid.uuid4()
         owner_id = uuid.uuid4()
-        
+
         team = make_team(id=team_id, owner_id=owner_id, member_ids=[owner_id, user_id])
         team_repo.get_team.return_value = team
 
         await service.leave_team(team_id, user_id)
 
         team_repo.remove_member.assert_called_once_with(team_id, user_id)
-        kafka_producer.send_member_left.assert_called_once()
+        kafka_producer.send_member_left.assert_called_once_with(
+            team_id, user_id, team.event_id
+        )
 
     @pytest.mark.asyncio
     async def test_raises_when_user_not_member(self, service, team_repo):
         team_id = uuid.uuid4()
         user_id = uuid.uuid4()
-        
+
         team = make_team(id=team_id, member_ids=[])
         team_repo.get_team.return_value = team
 
@@ -192,7 +157,7 @@ class TestLeaveTeam:
     async def test_raises_when_owner_tries_to_leave(self, service, team_repo):
         team_id = uuid.uuid4()
         owner_id = uuid.uuid4()
-        
+
         team = make_team(id=team_id, owner_id=owner_id, member_ids=[owner_id])
         team_repo.get_team.return_value = team
 
@@ -203,24 +168,39 @@ class TestLeaveTeam:
 @pytest.mark.unit
 class TestKickMember:
     @pytest.mark.asyncio
-    async def test_calls_kick_member_and_kafka(self, service, team_repo, kafka_producer):
+    async def test_calls_remove_member_and_kafka(
+        self, service, team_repo, kafka_producer
+    ):
         team_id = uuid.uuid4()
         user_id = uuid.uuid4()
         owner_id = uuid.uuid4()
-        
+
         team = make_team(id=team_id, owner_id=owner_id, member_ids=[owner_id, user_id])
         team_repo.get_team.return_value = team
 
         await service.kick_member(team_id, user_id)
 
-        team_repo.kick_member.assert_called_once_with(team_id, user_id)
-        kafka_producer.send_member_kicked.assert_called_once()
+        team_repo.remove_member.assert_called_once_with(team_id, user_id)
+        kafka_producer.send_member_kicked.assert_called_once_with(
+            team_id, user_id, owner_id, team.event_id
+        )
+
+    @pytest.mark.asyncio
+    async def test_raises_when_user_not_member(self, service, team_repo):
+        team_id = uuid.uuid4()
+        user_id = uuid.uuid4()
+
+        team = make_team(id=team_id, member_ids=[])
+        team_repo.get_team.return_value = team
+
+        with pytest.raises(service_errors.UserNotFoundError):
+            await service.kick_member(team_id, user_id)
 
     @pytest.mark.asyncio
     async def test_raises_when_cannot_kick_owner(self, service, team_repo):
         team_id = uuid.uuid4()
         owner_id = uuid.uuid4()
-        
+
         team = make_team(id=team_id, owner_id=owner_id, member_ids=[owner_id])
         team_repo.get_team.return_value = team
 
@@ -231,27 +211,43 @@ class TestKickMember:
 @pytest.mark.unit
 class TestTeamSubmit:
     @pytest.mark.asyncio
-    async def test_calls_team_submit_and_kafka(self, service, team_repo, kafka_producer):
+    async def test_calls_change_status_and_kafka(
+        self, service, team_repo, kafka_producer
+    ):
         team_id = uuid.uuid4()
         submission_url = "https://example.com/submission"
-        
+
         team = make_team(id=team_id, status=TeamStatusEnum.FULL)
         team_repo.get_team.return_value = team
 
         await service.team_submit(team_id, submission_url)
 
-        team_repo.team_submit.assert_called_once_with(team_id, submission_url)
-        kafka_producer.send_team_submitted.assert_called_once()
+        team_repo.change_team_status.assert_called_once_with(
+            team_id, TeamStatusEnum.SUBMITTED.value
+        )
+        kafka_producer.send_team_submitted.assert_called_once_with(
+            team_id, submission_url, team.event_id, team.track_id
+        )
 
     @pytest.mark.asyncio
     async def test_raises_when_team_not_full(self, service, team_repo):
         team_id = uuid.uuid4()
         submission_url = "https://example.com/submission"
-        
+
         team = make_team(id=team_id, status=TeamStatusEnum.DRAFT)
         team_repo.get_team.return_value = team
 
         with pytest.raises(service_errors.TeamOperationError):
+            await service.team_submit(team_id, submission_url)
+
+    @pytest.mark.asyncio
+    async def test_raises_when_team_not_found(self, service, team_repo):
+        team_id = uuid.uuid4()
+        submission_url = "https://example.com/submission"
+
+        team_repo.get_team.side_effect = adapter_errors.TeamNotFoundError
+
+        with pytest.raises(service_errors.TeamNotFoundError):
             await service.team_submit(team_id, submission_url)
 
 
@@ -272,4 +268,3 @@ class TestChangeTeamStatus:
 
         with pytest.raises(service_errors.TeamNotFoundError):
             await service.change_team_status(uuid.uuid4(), TeamStatusEnum.BUILDING)
-            
