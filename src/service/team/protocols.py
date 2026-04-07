@@ -1,4 +1,4 @@
-from typing import Protocol, List, Optional
+from typing import Protocol
 import uuid
 from src.models.team import Team
 
