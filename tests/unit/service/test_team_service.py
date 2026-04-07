@@ -83,7 +83,7 @@ class TestCreateTeam:
     @pytest.mark.asyncio
     async def test_returns_id(self, service, team_repo):
         team = make_team()
-        
+
         result = await service.create_team(team)
 
         assert isinstance(result, uuid.UUID)
@@ -110,7 +110,9 @@ class TestUpdateTeam:
         kafka_producer.send_team_updated.assert_called_once_with(team)
 
     @pytest.mark.asyncio
-    async def test_raises_service_error_when_not_found(self, service, team_repo, kafka_producer):
+    async def test_raises_service_error_when_not_found(
+        self, service, team_repo, kafka_producer
+    ):
         team = make_team()
         team_repo.update_team.side_effect = adapter_errors.TeamNotFoundError
 
@@ -132,7 +134,9 @@ class TestDeleteTeam:
         kafka_producer.send_team_deleted.assert_called_once_with(team_id)
 
     @pytest.mark.asyncio
-    async def test_raises_service_error_when_not_found(self, service, team_repo, kafka_producer):
+    async def test_raises_service_error_when_not_found(
+        self, service, team_repo, kafka_producer
+    ):
         team_repo.delete_team.side_effect = adapter_errors.TeamNotFoundError
 
         with pytest.raises(service_errors.TeamNotFoundError):
@@ -148,7 +152,7 @@ class TestLeaveTeam:
         team_id = uuid.uuid4()
         user_id = uuid.uuid4()
         owner_id = uuid.uuid4()
-        
+
         team = make_team(id=team_id, owner_id=owner_id, member_ids=[owner_id, user_id])
         team_repo.get_team.return_value = team
 
@@ -160,7 +164,7 @@ class TestLeaveTeam:
     async def test_raises_when_user_not_member(self, service, team_repo):
         team_id = uuid.uuid4()
         user_id = uuid.uuid4()
-        
+
         team = make_team(id=team_id, member_ids=[])
         team_repo.get_team.return_value = team
 
@@ -171,7 +175,7 @@ class TestLeaveTeam:
     async def test_raises_when_owner_tries_to_leave(self, service, team_repo):
         team_id = uuid.uuid4()
         owner_id = uuid.uuid4()
-        
+
         team = make_team(id=team_id, owner_id=owner_id, member_ids=[owner_id])
         team_repo.get_team.return_value = team
 
@@ -186,7 +190,7 @@ class TestKickMember:
         team_id = uuid.uuid4()
         user_id = uuid.uuid4()
         owner_id = uuid.uuid4()
-        
+
         team = make_team(id=team_id, owner_id=owner_id, member_ids=[owner_id, user_id])
         team_repo.get_team.return_value = team
 
@@ -198,7 +202,7 @@ class TestKickMember:
     async def test_raises_when_cannot_kick_owner(self, service, team_repo):
         team_id = uuid.uuid4()
         owner_id = uuid.uuid4()
-        
+
         team = make_team(id=team_id, owner_id=owner_id, member_ids=[owner_id])
         team_repo.get_team.return_value = team
 
@@ -212,7 +216,7 @@ class TestTeamSubmit:
     async def test_calls_repo(self, service, team_repo):
         team_id = uuid.uuid4()
         submission_url = "https://example.com/submission"
-        
+
         team = make_team(id=team_id, status=TeamStatusEnum.FULL)
         team_repo.get_team.return_value = team
 
@@ -224,7 +228,7 @@ class TestTeamSubmit:
     async def test_raises_when_team_not_full(self, service, team_repo):
         team_id = uuid.uuid4()
         submission_url = "https://example.com/submission"
-        
+
         team = make_team(id=team_id, status=TeamStatusEnum.DRAFT)
         team_repo.get_team.return_value = team
 
@@ -239,7 +243,7 @@ class TestUpdateMember:
         team_id = uuid.uuid4()
         user_id = uuid.uuid4()
         role = "co-captain"
-        
+
         team = make_team(id=team_id, owner_id=uuid.uuid4(), member_ids=[user_id])
         team_repo.get_team.return_value = team
 
@@ -252,7 +256,7 @@ class TestUpdateMember:
         team_id = uuid.uuid4()
         owner_id = uuid.uuid4()
         role = "new_role"
-        
+
         team = make_team(id=team_id, owner_id=owner_id, member_ids=[owner_id])
         team_repo.get_team.return_value = team
 
@@ -266,7 +270,7 @@ class TestChangeTeamStatus:
     async def test_calls_repo(self, service, team_repo):
         team_id = uuid.uuid4()
         new_status = TeamStatusEnum.BUILDING
-        
+
         await service.change_team_status(team_id, new_status)
 
         team_repo.change_team_status.assert_called_once_with(team_id, new_status.value)
@@ -285,7 +289,7 @@ class TestAddMember:
     async def test_calls_repo(self, service, team_repo):
         team_id = uuid.uuid4()
         user_id = uuid.uuid4()
-        
+
         team = make_team(id=team_id, member_ids=[])
         team_repo.get_team.return_value = team
 
@@ -297,7 +301,7 @@ class TestAddMember:
     async def test_raises_when_user_already_member(self, service, team_repo):
         team_id = uuid.uuid4()
         user_id = uuid.uuid4()
-        
+
         team = make_team(id=team_id, member_ids=[user_id])
         team_repo.get_team.return_value = team
 

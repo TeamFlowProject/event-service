@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 
 class TeamStatusEnum(str, Enum):
     """Статусы команды"""
+
     DRAFT = "draft"
     BUILDING = "building"
     FULL = "full"
@@ -19,6 +20,7 @@ class TeamStatusEnum(str, Enum):
 @dataclass
 class Role:
     """Роль в команде"""
+
     id: UUID
     name: str = ""
     description: str = ""
@@ -28,7 +30,8 @@ class Role:
 @dataclass
 class User:
     """Пользователь системы"""
-    id: UUID 
+
+    id: UUID
     name: str = ""
     surname: str = ""
     patronymic: str = ""
@@ -37,10 +40,11 @@ class User:
 @dataclass
 class Team:
     """Команда"""
+
     id: UUID
-    track_id: UUID 
-    event_id: UUID 
-    owner_id: UUID 
+    track_id: UUID
+    event_id: UUID
+    owner_id: UUID
     member_ids: list[UUID]
     required_roles: list[Role]
     name: str = ""

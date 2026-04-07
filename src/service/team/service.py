@@ -1,4 +1,9 @@
-from src.service.team.protocols import TeamRepository, EventClient, TrackClient, KafkaProducer
+from src.service.team.protocols import (
+    TeamRepository,
+    EventClient,
+    TrackClient,
+    KafkaProducer,
+)
 from src.models.team import Team, TeamStatusEnum
 import uuid
 import src.adapters.repository.errors as adapter_errors
@@ -103,13 +108,17 @@ class TeamService:
         """
         try:
             team = await self._team_repository.get_team(team_id)
-            
+
             if user_id not in team.member_ids:
-                raise service_errors.UserNotFoundError(f"User {user_id} is not a member of team {team_id}")
-            
+                raise service_errors.UserNotFoundError(
+                    f"User {user_id} is not a member of team {team_id}"
+                )
+
             if team.owner_id == user_id:
-                raise service_errors.TeamOperationError("Team owner cannot leave. Use delete_team instead.")
-            
+                raise service_errors.TeamOperationError(
+                    "Team owner cannot leave. Use delete_team instead."
+                )
+
             await self._team_repository.kick_member(team_id, user_id)
             # Убрал вызов send_member_left
         except adapter_errors.TeamNotFoundError as e:
@@ -130,13 +139,15 @@ class TeamService:
         """
         try:
             team = await self._team_repository.get_team(team_id)
-            
+
             if user_id not in team.member_ids:
-                raise service_errors.UserNotFoundError(f"User {user_id} is not a member of team {team_id}")
-            
+                raise service_errors.UserNotFoundError(
+                    f"User {user_id} is not a member of team {team_id}"
+                )
+
             if team.owner_id == user_id:
                 raise service_errors.TeamOperationError("Cannot kick team owner")
-            
+
             await self._team_repository.kick_member(team_id, user_id)
             # Убрал вызов send_member_kicked
         except adapter_errors.TeamNotFoundError as e:
@@ -156,18 +167,20 @@ class TeamService:
         """
         try:
             team = await self._team_repository.get_team(team_id)
-            
+
             if team.status != TeamStatusEnum.FULL:
                 raise service_errors.TeamOperationError(
                     f"Cannot submit team in {team.status.value} status. Team must be {TeamStatusEnum.FULL.value}."
                 )
-            
+
             await self._team_repository.team_submit(team_id, submission_url)
             # Убрал вызов send_team_submitted
         except adapter_errors.TeamNotFoundError as e:
             raise service_errors.TeamNotFoundError("Failed to submit team") from e
 
-    async def update_member(self, team_id: uuid.UUID, user_id: uuid.UUID, role: str) -> None:
+    async def update_member(
+        self, team_id: uuid.UUID, user_id: uuid.UUID, role: str
+    ) -> None:
         """
         Update a member's role in a team
 
@@ -183,19 +196,25 @@ class TeamService:
         """
         try:
             team = await self._team_repository.get_team(team_id)
-            
+
             if user_id not in team.member_ids:
-                raise service_errors.UserNotFoundError(f"User {user_id} is not a member of team {team_id}")
-            
+                raise service_errors.UserNotFoundError(
+                    f"User {user_id} is not a member of team {team_id}"
+                )
+
             if team.owner_id == user_id:
-                raise service_errors.TeamOperationError("Cannot update owner's role via update_member")
-            
+                raise service_errors.TeamOperationError(
+                    "Cannot update owner's role via update_member"
+                )
+
             await self._team_repository.update_member(team_id, user_id, role)
             # Убрал вызов send_member_updated
         except adapter_errors.TeamNotFoundError as e:
             raise service_errors.TeamNotFoundError("Failed to update member") from e
 
-    async def change_team_status(self, team_id: uuid.UUID, status: TeamStatusEnum) -> None:
+    async def change_team_status(
+        self, team_id: uuid.UUID, status: TeamStatusEnum
+    ) -> None:
         """
         Change a team's status
 
@@ -207,11 +226,12 @@ class TeamService:
             TeamNotFoundError: If the team could not be found
         """
         try:
-            
             await self._team_repository.change_team_status(team_id, status.value)
             # Убрал вызов send_team_status_changed
         except adapter_errors.TeamNotFoundError as e:
-            raise service_errors.TeamNotFoundError("Failed to change team status") from e
+            raise service_errors.TeamNotFoundError(
+                "Failed to change team status"
+            ) from e
 
     async def add_member(self, team_id: uuid.UUID, user_id: uuid.UUID) -> None:
         """
@@ -228,10 +248,12 @@ class TeamService:
         """
         try:
             team = await self._team_repository.get_team(team_id)
-            
+
             if user_id in team.member_ids:
-                raise service_errors.UserNotFoundError(f"User {user_id} is already a member of team {team_id}")
-            
+                raise service_errors.UserNotFoundError(
+                    f"User {user_id} is already a member of team {team_id}"
+                )
+
             await self._team_repository.add_member(team_id, user_id)
             # Убрал вызов send_member_added
         except adapter_errors.TeamNotFoundError as e:
