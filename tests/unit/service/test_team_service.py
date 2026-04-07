@@ -8,7 +8,6 @@ import src.adapters.repository.errors as adapter_errors
 import src.service.errors as service_errors
 from src.models.team import Team, TeamStatusEnum, Role
 from src.service.team.service import TeamService
-from src.service.team.models import CreateTeamRequestDTO, UpdateTeamRequestDTO
 
 
 def make_team(**kwargs) -> Team:
@@ -92,7 +91,6 @@ def kafka_producer():
 def service(team_repo, user_repo, event_client, track_client, kafka_producer):
     return TeamService(
         team_repository=team_repo,
-        user_repository=user_repo,
         event_client=event_client,
         track_client=track_client,
         kafka_producer=kafka_producer,
@@ -123,15 +121,26 @@ class TestGetTeams:
 @pytest.mark.unit
 class TestCreateTeam:
     @pytest.mark.asyncio
-    async def test_returns_id(self, service, event_client, track_client, user_repo, team_repo):
+    async def test_returns_id(self, service, event_client, track_client, team_repo):
         event_client.event_exists.return_value = True
         track_client.track_exists.return_value = True
-        user_repo.user_exists.return_value = True
         team_repo.get_teams_by_user.return_value = []
         
-        request = make_create_request()
+        team = Team(
+            id=uuid.uuid4(),
+            name="New Team",
+            description="New team description",
+            track_id=uuid.uuid4(),
+            event_id=uuid.uuid4(),
+            owner_id=uuid.uuid4(),
+            member_ids=[],
+            required_roles=[],
+            status=TeamStatusEnum.DRAFT,
+            created_at=datetime.now(),
+            updated_at=datetime.now()
+        )
 
-        result = await service.create_team(request)
+        result = await service.create_team(team)
 
         assert isinstance(result, uuid.UUID)
 

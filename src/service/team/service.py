@@ -207,7 +207,6 @@ class TeamService:
             TeamNotFoundError: If the team could not be found
         """
         try:
-            team = await self._team_repository.get_team(team_id)
             
             await self._team_repository.change_team_status(team_id, status.value)
             # Убрал вызов send_team_status_changed
