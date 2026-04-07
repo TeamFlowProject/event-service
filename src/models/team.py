@@ -37,14 +37,14 @@ class User:
 @dataclass
 class Team:
     """Команда"""
-    id: UUID 
-    name: str = ""
-    description: str = ""
+    id: UUID
     track_id: UUID 
     event_id: UUID 
     owner_id: UUID 
-    member_ids: list[UUID] 
-    required_roles: list[Role] 
+    member_ids: list[UUID]
+    required_roles: list[Role]
+    name: str = ""
+    description: str = ""
     status: TeamStatusEnum = TeamStatusEnum.DRAFT
-    created_at: datetime 
-    updated_at: datetime
+    created_at: datetime = field(default_factory=datetime.now)
+    updated_at: datetime = field(default_factory=datetime.now)
