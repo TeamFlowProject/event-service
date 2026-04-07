@@ -22,7 +22,7 @@ class TeamService:
         self._track_client = track_client
         self._kafka_producer = kafka_producer
 
-    async def get_teams(self, team_id: uuid.UUID) -> Team:
+    async def get_team(self, team_id: uuid.UUID) -> Team:
         """
         Get a team by ID
 
@@ -40,104 +40,37 @@ class TeamService:
         except adapter_errors.TeamNotFoundError as e:
             raise service_errors.TeamNotFoundError("Failed to get team") from e
 
-
-    async def create_team(self, request: CreateTeamRequestDTO) -> uuid.UUID:
+    async def create_team(self, team: Team) -> uuid.UUID:
         """
         Create a new team
 
         Args:
-            request (CreateTeamRequestDTO): The team data to create
+            team (Team): The team to create
 
         Returns:
             uuid.UUID: The ID of the created team
 
         Raises:
-            EventNotFoundError: If the event does not exist
-            TrackNotFoundError: If the track does not exist
-            UserNotFoundError: If the owner does not exist
-            TeamAlreadyExistsError: If user already has a team in this track
+            TeamNotFoundError: If the team could not be created
         """
-        # Check if event exists
-        try:
-            if not await self._event_client.event_exists(request.event_id):
-                raise service_errors.EventNotFoundError(f"Event {request.event_id} does not exist")
-        except adapter_errors.EventNotFoundError as e:
-            raise service_errors.EventNotFoundError("Failed to create team") from e
-
-        # Check if track exists
-        try:
-            if not await self._track_client.track_exists(request.track_id):
-                raise service_errors.TrackNotFoundError(f"Track {request.track_id} does not exist")
-        except adapter_errors.TrackNotFoundError as e:
-            raise service_errors.TrackNotFoundError("Failed to create team") from e
-
-        # Check if user exists
-        try:
-            if not await self._user_repository.user_exists(request.owner_id):
-                raise service_errors.UserNotFoundError(f"User {request.owner_id} does not exist")
-        except adapter_errors.UserNotFoundError as e:
-            raise service_errors.UserNotFoundError("Failed to create team") from e
-
-        # Check if user already has a team in this track
-        try:
-            user_teams = await self._team_repository.get_teams_by_user(request.owner_id)
-            for team in user_teams:
-                if team.track_id == request.track_id:
-                    raise service_errors.TeamAlreadyExistsError(
-                        f"User {request.owner_id} already has a team in track {request.track_id}"
-                    )
-        except adapter_errors.TeamAlreadyExistsError as e:
-            raise service_errors.TeamAlreadyExistsError("Failed to create team") from e
-
-        # Create team
-        now = datetime.now()
-        team = Team(
-            id=uuid.uuid4(),
-            name=request.name,
-            description=request.description,
-            track_id=request.track_id,
-            event_id=request.event_id,
-            owner_id=request.owner_id,
-            member_ids=[request.owner_id],
-            required_roles=request.required_roles,
-            status=TeamStatusEnum.DRAFT,
-            created_at=now,
-            updated_at=now
-        )
-
-        try:
-            await self._team_repository.create_team(team)
-            await self._kafka_producer.send_team_created(team)
-        except adapter_errors.TeamNotFoundError as e:
-            raise service_errors.TeamNotFoundError("Failed to create team") from e
+        await self._team_repository.create_team(team)
+        await self._kafka_producer.send_team_created(team)
 
         return team.id
 
-    async def update_team(self, team_id: uuid.UUID, request: UpdateTeamRequestDTO) -> None:
+    async def update_team(self, team: Team) -> None:
         """
         Update an existing team
 
         Updates full state of the team including all roles and members
 
         Args:
-            team_id (uuid.UUID): The ID of the team to update
-            request (UpdateTeamRequestDTO): The team data to update
+            team (Team): The team to update
 
         Raises:
             TeamNotFoundError: If the team could not be updated
         """
         try:
-            team = await self._team_repository.get_team(team_id)
-            
-            if request.name is not None:
-                team.name = request.name
-            if request.description is not None:
-                team.description = request.description
-            if request.required_roles is not None:
-                team.required_roles = request.required_roles
-            
-            team.updated_at = datetime.now()
-            
             await self._team_repository.update_team(team)
             await self._kafka_producer.send_team_updated(team)
         except adapter_errors.TeamNotFoundError as e:
@@ -302,21 +235,8 @@ class TeamService:
         try:
             team = await self._team_repository.get_team(team_id)
             
-            # Check if user exists
-            if not await self._user_repository.user_exists(user_id):
-                raise service_errors.UserNotFoundError(f"User {user_id} does not exist")
-            
-            # Check if user is already a member
             if user_id in team.member_ids:
                 raise service_errors.UserNotFoundError(f"User {user_id} is already a member of team {team_id}")
-            
-            # Check if user already has a team in this track
-            user_teams = await self._team_repository.get_teams_by_user(user_id)
-            for ut in user_teams:
-                if ut.track_id == team.track_id:
-                    raise service_errors.TeamAlreadyExistsError(
-                        f"User {user_id} already has a team in track {team.track_id}"
-                    )
             
             await self._team_repository.add_member(team_id, user_id)
             await self._kafka_producer.send_member_added(team_id, user_id, team.event_id, team.track_id)

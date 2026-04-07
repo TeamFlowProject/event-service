@@ -1,6 +1,3 @@
-"""
-Protocols for Team Service
-"""
 from typing import Protocol, List, Optional
 import uuid
 from src.models.team import Team
@@ -27,13 +24,6 @@ class TeamRepository(Protocol):
     
     async def add_member(self, team_id: uuid.UUID, user_id: uuid.UUID) -> None: ...
 
-
-class UserRepository(Protocol):
-    """Repository for user data access"""
-    
-    async def user_exists(self, user_id: uuid.UUID) -> bool: ...
-    
-    async def get_user(self, user_id: uuid.UUID) -> dict: ...
 
 
 class EventClient(Protocol):
