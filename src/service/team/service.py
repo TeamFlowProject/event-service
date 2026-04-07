@@ -1,8 +1,6 @@
-from src.service.team.protocols import TeamRepository, UserRepository, EventClient, TrackClient, KafkaProducer
+from src.service.team.protocols import TeamRepository, EventClient, TrackClient, KafkaProducer
 from src.models.team import Team, TeamStatusEnum
 import uuid
-from datetime import datetime
-from typing import Optional
 import src.adapters.repository.errors as adapter_errors
 import src.service.errors as service_errors
 
@@ -11,13 +9,11 @@ class TeamService:
     def __init__(
         self,
         team_repository: TeamRepository,
-        user_repository: UserRepository,
         event_client: EventClient,
         track_client: TrackClient,
         kafka_producer: KafkaProducer,
     ) -> None:
         self._team_repository = team_repository
-        self._user_repository = user_repository
         self._event_client = event_client
         self._track_client = track_client
         self._kafka_producer = kafka_producer
@@ -115,7 +111,7 @@ class TeamService:
                 raise service_errors.TeamOperationError("Team owner cannot leave. Use delete_team instead.")
             
             await self._team_repository.kick_member(team_id, user_id)
-            await self._kafka_producer.send_member_left(team_id, user_id, team.event_id)
+            # Убрал вызов send_member_left
         except adapter_errors.TeamNotFoundError as e:
             raise service_errors.TeamNotFoundError("Failed to leave team") from e
 
@@ -142,7 +138,7 @@ class TeamService:
                 raise service_errors.TeamOperationError("Cannot kick team owner")
             
             await self._team_repository.kick_member(team_id, user_id)
-            await self._kafka_producer.send_member_kicked(team_id, user_id, team.owner_id, team.event_id)
+            # Убрал вызов send_member_kicked
         except adapter_errors.TeamNotFoundError as e:
             raise service_errors.TeamNotFoundError("Failed to kick member") from e
 
@@ -167,7 +163,7 @@ class TeamService:
                 )
             
             await self._team_repository.team_submit(team_id, submission_url)
-            await self._kafka_producer.send_team_submitted(team_id, submission_url, team.event_id, team.track_id)
+            # Убрал вызов send_team_submitted
         except adapter_errors.TeamNotFoundError as e:
             raise service_errors.TeamNotFoundError("Failed to submit team") from e
 
@@ -195,7 +191,7 @@ class TeamService:
                 raise service_errors.TeamOperationError("Cannot update owner's role via update_member")
             
             await self._team_repository.update_member(team_id, user_id, role)
-            await self._kafka_producer.send_member_updated(team_id, user_id, role, team.event_id)
+            # Убрал вызов send_member_updated
         except adapter_errors.TeamNotFoundError as e:
             raise service_errors.TeamNotFoundError("Failed to update member") from e
 
@@ -212,10 +208,9 @@ class TeamService:
         """
         try:
             team = await self._team_repository.get_team(team_id)
-            old_status = team.status
             
             await self._team_repository.change_team_status(team_id, status.value)
-            await self._kafka_producer.send_team_status_changed(team_id, old_status.value, status.value, team.event_id)
+            # Убрал вызов send_team_status_changed
         except adapter_errors.TeamNotFoundError as e:
             raise service_errors.TeamNotFoundError("Failed to change team status") from e
 
@@ -239,6 +234,6 @@ class TeamService:
                 raise service_errors.UserNotFoundError(f"User {user_id} is already a member of team {team_id}")
             
             await self._team_repository.add_member(team_id, user_id)
-            await self._kafka_producer.send_member_added(team_id, user_id, team.event_id, team.track_id)
+            # Убрал вызов send_member_added
         except adapter_errors.TeamNotFoundError as e:
             raise service_errors.TeamNotFoundError("Failed to add member") from e

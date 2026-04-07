@@ -1,239 +1,110 @@
-from src.service.team.protocols import TeamRepository, EventClient, TrackClient, KafkaProducer
-from src.models.team import Team, TeamStatusEnum
+from src.service.track.protocols import KafkaProducer, TrackRepository
+from src.models.track import Track
 import uuid
 import src.adapters.repository.errors as adapter_errors
 import src.service.errors as service_errors
 
 
-class TeamService:
+class TrackService:
     def __init__(
         self,
-        team_repository: TeamRepository,
-        event_client: EventClient,
-        track_client: TrackClient,
+        track_repository: TrackRepository,
         kafka_producer: KafkaProducer,
     ) -> None:
-        self._team_repository = team_repository
-        self._event_client = event_client
-        self._track_client = track_client
+        self._track_repository = track_repository
         self._kafka_producer = kafka_producer
 
-    async def get_team(self, team_id: uuid.UUID) -> Team:
+    async def create_track(self, track: Track) -> uuid.UUID:
         """
-        Get a team by ID
+        Create a new track
 
         Args:
-            team_id (uuid.UUID): The ID of the team to get
+            track (Track): The track to create
 
         Returns:
-            Team: The team with the given ID
+            uuid.UUID: The ID of the created track
 
         Raises:
-            TeamNotFoundError: If the team could not be found
+            TrackNotFoundError: If the track could not be created
         """
-        try:
-            return await self._team_repository.get_team(team_id)
-        except adapter_errors.TeamNotFoundError as e:
-            raise service_errors.TeamNotFoundError("Failed to get team") from e
 
-    async def create_team(self, team: Team) -> uuid.UUID:
+        await self._track_repository.create_track(track)
+        await self._kafka_producer.send_create_track(track)
+
+        return track.id
+
+    async def update_track(self, track: Track) -> None:
         """
-        Create a new team
+        Update an existing track
+
+        Updates full state of the track including all roles
 
         Args:
-            team (Team): The team to create
+            track (Track): The track to update
+
+        Raises:
+            TrackNotFoundError: If the track could not be updated
+        """
+
+        try:
+            await self._track_repository.update_track(track)
+            await self._kafka_producer.send_update_track(track)
+        except adapter_errors.TrackNotFoundError as e:
+            raise service_errors.TrackNotFoundError("Failed to update track") from e
+
+    async def delete_track(self, track_id: uuid.UUID) -> None:
+        """
+        Delete an existing track
+
+        Args:
+            id (uuid.UUID): The ID of the track to delete
+
+        Raises:
+            TrackNotFoundError: If the track could not be deleted
+        """
+
+        try:
+            await self._track_repository.delete_track(track_id)
+            await self._kafka_producer.send_delete_track(track_id)
+        except adapter_errors.TrackNotFoundError as e:
+            raise service_errors.TrackNotFoundError("Failed to delete track") from e
+
+    async def get_track(self, track_id: uuid.UUID) -> Track:
+        """
+        Get a track by ID
+
+        Args:
+            id (uuid.UUID): The ID of the track to get
 
         Returns:
-            uuid.UUID: The ID of the created team
+            Track: The track with the given ID
 
         Raises:
-            TeamNotFoundError: If the team could not be created
+            TrackNotFoundError: If the track could not be found
+            RoleNotFoundError: If a role could not be found
         """
-        await self._team_repository.create_team(team)
-        await self._kafka_producer.send_team_created(team)
 
-        return team.id
+        try:
+            return await self._track_repository.get_track(track_id)
+        except adapter_errors.TrackNotFoundError as e:
+            raise service_errors.TrackNotFoundError("Failed to get track") from e
 
-    async def update_team(self, team: Team) -> None:
+    async def get_tracks_by_event_id(self, event_id: uuid.UUID) -> list[Track]:
         """
-        Update an existing team
-
-        Updates full state of the team including all roles and members
+        Get all tracks for an event
 
         Args:
-            team (Team): The team to update
+            event_id (uuid.UUID): The ID of the event to get tracks for
+
+        Returns:
+            list[Track]: The tracks for the event
 
         Raises:
-            TeamNotFoundError: If the team could not be updated
+            EventNotFoundError: If the event could not be found
+            RoleNotFoundError: If a role could not be found
         """
+
         try:
-            await self._team_repository.update_team(team)
-            await self._kafka_producer.send_team_updated(team)
-        except adapter_errors.TeamNotFoundError as e:
-            raise service_errors.TeamNotFoundError("Failed to update team") from e
-
-    async def delete_team(self, team_id: uuid.UUID) -> None:
-        """
-        Delete an existing team
-
-        Args:
-            team_id (uuid.UUID): The ID of the team to delete
-
-        Raises:
-            TeamNotFoundError: If the team could not be deleted
-        """
-        try:
-            await self._team_repository.delete_team(team_id)
-            await self._kafka_producer.send_team_deleted(team_id)
-        except adapter_errors.TeamNotFoundError as e:
-            raise service_errors.TeamNotFoundError("Failed to delete team") from e
-
-    async def leave_team(self, team_id: uuid.UUID, user_id: uuid.UUID) -> None:
-        """
-        User leaves a team
-
-        Args:
-            team_id (uuid.UUID): The ID of the team to leave
-            user_id (uuid.UUID): The ID of the user leaving
-
-        Raises:
-            TeamNotFoundError: If the team could not be found
-            UserNotFoundError: If the user is not a member
-            TeamOperationError: If owner tries to leave
-        """
-        try:
-            team = await self._team_repository.get_team(team_id)
-            
-            if user_id not in team.member_ids:
-                raise service_errors.UserNotFoundError(f"User {user_id} is not a member of team {team_id}")
-            
-            if team.owner_id == user_id:
-                raise service_errors.TeamOperationError("Team owner cannot leave. Use delete_team instead.")
-            
-            await self._team_repository.kick_member(team_id, user_id)
-            # Убрал вызов send_member_left
-        except adapter_errors.TeamNotFoundError as e:
-            raise service_errors.TeamNotFoundError("Failed to leave team") from e
-
-    async def kick_member(self, team_id: uuid.UUID, user_id: uuid.UUID) -> None:
-        """
-        Kick a member from a team
-
-        Args:
-            team_id (uuid.UUID): The ID of the team
-            user_id (uuid.UUID): The ID of the user to kick
-
-        Raises:
-            TeamNotFoundError: If the team could not be found
-            UserNotFoundError: If the user is not a member
-            TeamOperationError: If trying to kick the owner
-        """
-        try:
-            team = await self._team_repository.get_team(team_id)
-            
-            if user_id not in team.member_ids:
-                raise service_errors.UserNotFoundError(f"User {user_id} is not a member of team {team_id}")
-            
-            if team.owner_id == user_id:
-                raise service_errors.TeamOperationError("Cannot kick team owner")
-            
-            await self._team_repository.kick_member(team_id, user_id)
-            # Убрал вызов send_member_kicked
-        except adapter_errors.TeamNotFoundError as e:
-            raise service_errors.TeamNotFoundError("Failed to kick member") from e
-
-    async def team_submit(self, team_id: uuid.UUID, submission_url: str) -> None:
-        """
-        Submit a team for review
-
-        Args:
-            team_id (uuid.UUID): The ID of the team to submit
-            submission_url (str): The URL of the team's work
-
-        Raises:
-            TeamNotFoundError: If the team could not be found
-            TeamOperationError: If the team is not in FULL status
-        """
-        try:
-            team = await self._team_repository.get_team(team_id)
-            
-            if team.status != TeamStatusEnum.FULL:
-                raise service_errors.TeamOperationError(
-                    f"Cannot submit team in {team.status.value} status. Team must be {TeamStatusEnum.FULL.value}."
-                )
-            
-            await self._team_repository.team_submit(team_id, submission_url)
-            # Убрал вызов send_team_submitted
-        except adapter_errors.TeamNotFoundError as e:
-            raise service_errors.TeamNotFoundError("Failed to submit team") from e
-
-    async def update_member(self, team_id: uuid.UUID, user_id: uuid.UUID, role: str) -> None:
-        """
-        Update a member's role in a team
-
-        Args:
-            team_id (uuid.UUID): The ID of the team
-            user_id (uuid.UUID): The ID of the user
-            role (str): The new role for the user
-
-        Raises:
-            TeamNotFoundError: If the team could not be found
-            UserNotFoundError: If the user is not a member
-            TeamOperationError: If trying to update the owner's role
-        """
-        try:
-            team = await self._team_repository.get_team(team_id)
-            
-            if user_id not in team.member_ids:
-                raise service_errors.UserNotFoundError(f"User {user_id} is not a member of team {team_id}")
-            
-            if team.owner_id == user_id:
-                raise service_errors.TeamOperationError("Cannot update owner's role via update_member")
-            
-            await self._team_repository.update_member(team_id, user_id, role)
-            # Убрал вызов send_member_updated
-        except adapter_errors.TeamNotFoundError as e:
-            raise service_errors.TeamNotFoundError("Failed to update member") from e
-
-    async def change_team_status(self, team_id: uuid.UUID, status: TeamStatusEnum) -> None:
-        """
-        Change a team's status
-
-        Args:
-            team_id (uuid.UUID): The ID of the team
-            status (TeamStatusEnum): The new status for the team
-
-        Raises:
-            TeamNotFoundError: If the team could not be found
-        """
-        try:
-            team = await self._team_repository.get_team(team_id)
-            
-            await self._team_repository.change_team_status(team_id, status.value)
-            # Убрал вызов send_team_status_changed
-        except adapter_errors.TeamNotFoundError as e:
-            raise service_errors.TeamNotFoundError("Failed to change team status") from e
-
-    async def add_member(self, team_id: uuid.UUID, user_id: uuid.UUID) -> None:
-        """
-        Add a member to a team
-
-        Args:
-            team_id (uuid.UUID): The ID of the team
-            user_id (uuid.UUID): The ID of the user to add
-
-        Raises:
-            TeamNotFoundError: If the team could not be found
-            UserNotFoundError: If the user does not exist or is already a member
-            TeamAlreadyExistsError: If user already has a team in this track
-        """
-        try:
-            team = await self._team_repository.get_team(team_id)
-            
-            if user_id in team.member_ids:
-                raise service_errors.UserNotFoundError(f"User {user_id} is already a member of team {team_id}")
-            
-            await self._team_repository.add_member(team_id, user_id)
-            # Убрал вызов send_member_added
-        except adapter_errors.TeamNotFoundError as e:
-            raise service_errors.TeamNotFoundError("Failed to add member") from e
+            return await self._track_repository.get_tracks_by_event_id(event_id)
+        except adapter_errors.EventNotFoundError as e:
+            raise service_errors.EventNotFoundError("Failed to get tracks") from e
