@@ -92,7 +92,11 @@ class TeamService:
     async def team_submit(self, team_id: uuid.UUID) -> None:
         try:
             team = await self._team_repository.get_team(team_id)
-            if team.status != TeamStatusEnum.FULL:
+            if team.status in [
+                TeamStatusEnum.DRAFT,
+                TeamStatusEnum.SUBMITTED,
+                TeamStatusEnum.CONFIRMED,
+            ]:
                 raise service_errors.TeamOperationError(
                     f"Cannot submit. Team must be {TeamStatusEnum.FULL.value}."
                 )
