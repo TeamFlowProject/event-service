@@ -1,6 +1,7 @@
 from typing import Protocol
 import uuid
-from src.models.team import Team
+from src.models.team import Team, TeamStatusEnum
+from src.models.event import Participant
 
 
 class TeamRepository(Protocol):
@@ -8,7 +9,7 @@ class TeamRepository(Protocol):
 
     async def get_team(self, team_id: uuid.UUID) -> Team: ...
 
-    async def remove_member(self, team_id: uuid.UUID, user_id: uuid.UUID) -> None: ...
+    async def remove_member(self, team: Team, user: Participant) -> None: ...
 
     async def delete_team(self, team_id: uuid.UUID) -> None: ...
 
@@ -16,7 +17,7 @@ class TeamRepository(Protocol):
 
     async def update_team(self, team: Team) -> None: ...
 
-    async def change_team_status(self, team_id: uuid.UUID, status: str) -> None: ...
+    async def change_team_status(self, team: Team, status: TeamStatusEnum) -> None: ...
 
 
 class KafkaProducer(Protocol):
@@ -26,24 +27,10 @@ class KafkaProducer(Protocol):
 
     async def send_team_updated(self, team: Team) -> None: ...
 
-    async def send_team_deleted(self, team_id: uuid.UUID) -> None: ...
+    async def send_team_deleted(self, team: Team) -> None: ...
 
-    async def send_team_submitted(
-        self,
-        team_id: uuid.UUID,
-        submission_url: str,
-        event_id: uuid.UUID,
-        track_id: uuid.UUID,
-    ) -> None: ...
+    async def send_team_submitted(self, team: Team) -> None: ...
 
-    async def send_member_left(
-        self, team_id: uuid.UUID, user_id: uuid.UUID, event_id: uuid.UUID
-    ) -> None: ...
+    async def send_member_left(self, team: Team, member: Participant) -> None: ...
 
-    async def send_member_kicked(
-        self,
-        team_id: uuid.UUID,
-        user_id: uuid.UUID,
-        kicked_by: uuid.UUID,
-        event_id: uuid.UUID,
-    ) -> None: ...
+    async def send_member_kicked(self, team: Team, member: Participant) -> None: ...

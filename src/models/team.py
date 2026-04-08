@@ -2,39 +2,21 @@ from datetime import datetime
 from enum import Enum
 from uuid import UUID
 from dataclasses import dataclass, field
+from src.models.event import Participant
+from src.models.track import Role
 
 
 class TeamStatusEnum(str, Enum):
     """Статусы команды"""
 
-    DRAFT = "draft"
-    BUILDING = "building"
-    FULL = "full"
-    SUBMITTED = "submitted"
-    VALIDATED = "validated"
-    CONFIRMED = "confirmed"
-    REJECTED = "rejected"
-    INVALID = "invalid"
-
-
-@dataclass
-class Role:
-    """Роль в команде"""
-
-    id: UUID
-    name: str = ""
-    description: str = ""
-    count: int = 1
-
-
-@dataclass
-class User:
-    """Пользователь системы"""
-
-    id: UUID
-    name: str = ""
-    surname: str = ""
-    patronymic: str = ""
+    DRAFT = "DRAFT"
+    BUILDING = "BUILDING"
+    FULL = "FULL"
+    SUBMITTED = "SUBMITTED"
+    VALIDATED = "VALIDATED"
+    CONFIRMED = "CINFIRMED"
+    REJECTED = "REJECTED"
+    INVALID = "INVALID"
 
 
 @dataclass
@@ -44,8 +26,8 @@ class Team:
     id: UUID
     track_id: UUID
     event_id: UUID
-    owner_id: UUID
-    member_ids: list[UUID]
+    owner: Participant
+    members: list[Participant]
     required_roles: list[Role]
     name: str = ""
     description: str = ""
