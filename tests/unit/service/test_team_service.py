@@ -398,6 +398,16 @@ class TestKickMember:
         repo.remove_member.assert_not_called()
         kafka.send_member_kicked.assert_not_called()
 
+    @pytest.mark.asyncio
+    async def test_raises_service_error_when_team_not_found(self, service, repo, kafka):
+        repo.get_team.side_effect = adapter_errors.TeamNotFoundError
+
+        with pytest.raises(service_errors.TeamNotFoundError):
+            await service.kick_member(uuid.uuid4(), uuid.uuid4())
+
+        repo.remove_member.assert_not_called()
+        kafka.send_member_kicked.assert_not_called()
+
 
 @pytest.mark.unit
 class TestTeamSubmit:
@@ -507,6 +517,16 @@ class TestTeamSubmit:
             team_id, TeamStatusEnum.SUBMITTED
         )
         kafka.send_team_submitted.assert_called_once_with(team)
+
+    @pytest.mark.asyncio
+    async def test_raises_service_error_when_team_not_found(self, service, repo, kafka):
+        repo.get_team.side_effect = adapter_errors.TeamNotFoundError
+
+        with pytest.raises(service_errors.TeamNotFoundError):
+            await service.team_submit(uuid.uuid4())
+
+        repo.change_team_status.assert_not_called()
+        kafka.send_team_submitted.assert_not_called()
 
 
 @pytest.mark.unit
