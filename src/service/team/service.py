@@ -22,9 +22,8 @@ class TeamService:
 
     async def create_team(self, team: Team) -> uuid.UUID:
         try:
-            in_team = await self._team_repository.participant_in_team(team.owner.id)
-
-            if in_team:
+            owner = await self._team_repository.get_member_by_id(team.owner.id)
+            if owner.have_team:
                 raise service_errors.ParticipantAlreadyInTeam(
                     "Participant already in team"
                 )
@@ -36,7 +35,7 @@ class TeamService:
             raise service_errors.EventNotFoundError("Failed to find team") from e
         except adapter_errors.ParticipantNotFoundError as e:
             raise service_errors.ParticipantNotFoundError(
-                "Failed to find member"
+                "Failed to find team's owner"
             ) from e
         except adapter_errors.TeamAlreadyExistsError as e:
             raise service_errors.TeamAlreadyExistsError("Team already exists") from e
