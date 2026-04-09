@@ -22,9 +22,7 @@ class TeamService:
 
     async def create_team(self, team: Team) -> uuid.UUID:
         try:
-            in_team = await self._team_repository.participant_in_team(team.owner.id)
-
-            if in_team:
+            if team.owner.have_team:
                 raise service_errors.ParticipantAlreadyInTeam(
                     "Participant already in team"
                 )
