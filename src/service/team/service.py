@@ -104,7 +104,7 @@ class TeamService:
                 TeamStatusEnum.CONFIRMED,
             ]:
                 raise service_errors.TeamOperationError(
-                    f"Cannot submit. Team must be {TeamStatusEnum.FULL.value}."
+                    f"Cannot submit with {team.status}"
                 )
 
             await self._team_repository.change_team_status(
