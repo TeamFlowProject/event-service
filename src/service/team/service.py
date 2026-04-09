@@ -1,4 +1,3 @@
-from src.models.event import Participant
 from src.service.team.protocols import TeamRepository, KafkaProducer
 from src.models.team import Team, TeamStatusEnum
 import uuid
@@ -54,9 +53,10 @@ class TeamService:
         except adapter_errors.TeamNotFoundError as e:
             raise service_errors.TeamNotFoundError("Failed to delete team") from e
 
-    async def leave_team(self, team_id: uuid.UUID, member: Participant) -> None:
+    async def leave_team(self, team_id: uuid.UUID, member_id: uuid.UUID) -> None:
         try:
             team = await self._team_repository.get_team(team_id)
+            member = await self._team_repository.get_member_by_id(member_id)
             if member not in team.members:
                 raise service_errors.ParticipantNotFoundError(
                     f"User {member.id} is not a member"
@@ -67,14 +67,15 @@ class TeamService:
                     "Owner cannot leave. Use delete_team instead."
                 )
 
-            await self._team_repository.remove_member(team, member)
+            await self._team_repository.remove_member(team_id, member_id)
             await self._kafka_producer.send_member_left(team, member)
         except adapter_errors.TeamNotFoundError as e:
             raise service_errors.TeamNotFoundError("Failed to leave team") from e
 
-    async def kick_member(self, team_id: uuid.UUID, member: Participant) -> None:
+    async def kick_member(self, team_id: uuid.UUID, member_id: uuid.UUID) -> None:
         try:
             team = await self._team_repository.get_team(team_id)
+            member = await self._team_repository.get_member_by_id(member_id)
 
             if member not in team.members:
                 raise service_errors.ParticipantNotFoundError(
@@ -84,7 +85,7 @@ class TeamService:
             if team.owner == member:
                 raise service_errors.TeamOperationError("Cannot kick team owner")
 
-            await self._team_repository.remove_member(team, member)
+            await self._team_repository.remove_member(team_id, member_id)
             await self._kafka_producer.send_member_kicked(team, member)
         except adapter_errors.TeamNotFoundError as e:
             raise service_errors.TeamNotFoundError("Failed to kick member") from e
@@ -102,7 +103,7 @@ class TeamService:
                 )
 
             await self._team_repository.change_team_status(
-                team, TeamStatusEnum.SUBMITTED
+                team_id, TeamStatusEnum.SUBMITTED
             )
             await self._kafka_producer.send_team_submitted(team)
         except adapter_errors.TeamNotFoundError as e:
@@ -112,7 +113,6 @@ class TeamService:
         self, team_id: uuid.UUID, status: TeamStatusEnum
     ) -> None:
         try:
-            team = await self._team_repository.get_team(team_id)
-            await self._team_repository.change_team_status(team, status)
+            await self._team_repository.change_team_status(team_id, status)
         except adapter_errors.TeamNotFoundError as e:
             raise service_errors.TeamNotFoundError("Failed to change status") from e
