@@ -262,6 +262,27 @@ class TestLeaveTeam:
         kafka.send_member_left.assert_called_once_with(team, member)
 
     @pytest.mark.asyncio
+    async def test_raises_participant_not_found_error_when_member_not_exists(
+        self, service, repo, kafka
+    ):
+        """Тест: участник не найден в БД при попытке выйти из команды"""
+        team_id = uuid.uuid4()
+        member_id = uuid.uuid4()
+        team = make_team(id=team_id)
+
+        repo.get_team.return_value = team
+        repo.get_member_by_id.side_effect = adapter_errors.ParticipantNotFoundError
+
+        with pytest.raises(service_errors.ParticipantNotFoundError) as exc_info:
+            await service.leave_team(team_id, member_id)
+
+        assert "Failed to find member" in str(exc_info.value)
+        repo.get_team.assert_called_once_with(team_id)
+        repo.get_member_by_id.assert_called_once_with(member_id)
+        repo.remove_member.assert_not_called()
+        kafka.send_member_left.assert_not_called()
+
+    @pytest.mark.asyncio
     async def test_raises_error_when_member_not_in_team(self, service, repo, kafka):
         team_id = uuid.uuid4()
         member_id = uuid.uuid4()
@@ -353,6 +374,27 @@ class TestKickMember:
         with pytest.raises(service_errors.TeamOperationError):
             await service.kick_member(team_id, owner_id)
 
+        repo.remove_member.assert_not_called()
+        kafka.send_member_kicked.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_raises_participant_not_found_error_when_member_not_exists(
+        self, service, repo, kafka
+    ):
+        """Тест: участник не найден в БД при попытке кикнуть из команды"""
+        team_id = uuid.uuid4()
+        member_id = uuid.uuid4()
+        team = make_team(id=team_id)
+
+        repo.get_team.return_value = team
+        repo.get_member_by_id.side_effect = adapter_errors.ParticipantNotFoundError
+
+        with pytest.raises(service_errors.ParticipantNotFoundError) as exc_info:
+            await service.kick_member(team_id, member_id)
+
+        assert "Failed to find member" in str(exc_info.value)
+        repo.get_team.assert_called_once_with(team_id)
+        repo.get_member_by_id.assert_called_once_with(member_id)
         repo.remove_member.assert_not_called()
         kafka.send_member_kicked.assert_not_called()
 

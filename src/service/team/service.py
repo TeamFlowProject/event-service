@@ -77,6 +77,10 @@ class TeamService:
             await self._kafka_producer.send_member_left(team, member)
         except adapter_errors.TeamNotFoundError as e:
             raise service_errors.TeamNotFoundError("Failed to leave team") from e
+        except adapter_errors.ParticipantNotFoundError as e:
+            raise service_errors.ParticipantNotFoundError(
+                "Failed to find member"
+            ) from e
 
     async def kick_member(self, team_id: uuid.UUID, member_id: uuid.UUID) -> None:
         try:
@@ -95,6 +99,10 @@ class TeamService:
             await self._kafka_producer.send_member_kicked(team, member)
         except adapter_errors.TeamNotFoundError as e:
             raise service_errors.TeamNotFoundError("Failed to kick member") from e
+        except adapter_errors.ParticipantNotFoundError as e:
+            raise service_errors.ParticipantNotFoundError(
+                "Failed to find member"
+            ) from e
 
     async def team_submit(self, team_id: uuid.UUID) -> None:
         try:
