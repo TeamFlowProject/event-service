@@ -22,6 +22,13 @@ class TeamService:
 
     async def create_team(self, team: Team) -> uuid.UUID:
         try:
+            in_team = await self._team_repository.participant_in_team(team.owner.id)
+
+            if in_team:
+                raise service_errors.ParticipantAlreadyInTeam(
+                    "Participant already in team"
+                )
+
             await self._team_repository.create_team(team)
             await self._kafka_producer.send_team_created(team)
             return team.id
