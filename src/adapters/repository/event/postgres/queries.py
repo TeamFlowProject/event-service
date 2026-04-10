@@ -82,40 +82,12 @@ UPDATE_EVENT_QUERY = """
     WHERE id=%(id)s
     RETURNING id
 """
-UPDATE_PARTICIPANT_QUERY = """
-    UPDATE participants
-    SET 
-        name=%(name)s,
-        surname=%(surname)s,
-        patronymic=%(patronymic)s
-    WHERE id=%(id)s
-    RETURNING id
-"""
-UPDATE_PARTICIPANT_TEAM_STATUS_QUERY = """
-    UPDATE event_participants
-    SET 
-        have_team=%(have_team)s
-    WHERE id=%(id)s
-    RETURNING id
-"""
-
 
 DELETE_EVENT_QUERY = """
     DELETE FROM events
     WHERE id=%(id)s
     RETURNING id
 """
-DELETE_PARTICIPANT_QUERY = """
-    DELETE FROM participants
-    WHERE id=%(id)s
-    RETURNING id
-"""
-UNREGISTER_PARTICIPANT_QUERY = """
-    DELETE FROM event_participants
-    WHERE id=%(id)s
-    RETURNING id
-"""
-
 
 SELECT_EVENT_QUERY = """
     SELECT
@@ -135,16 +107,7 @@ SELECT_EVENT_QUERY = """
     FROM events
     WHERE id=%(id)s
 """
-SELECT_PARTICIPANT_QUERY = """
-    SELECT
-        id,
-        name,
-        surname,
-        patronymic
-    FROM participants
-    WHERE id=%(id)s
-"""
-SELECT_EVENTS_QUERY = """
+SELECT_EVENTS_QUERY_BY_NUM = """
     SELECT
         id,
         name,
@@ -161,17 +124,10 @@ SELECT_EVENTS_QUERY = """
         status
     FROM events
     ORDER BY created_at DESC
+    OFFSET %(offset)s LIMIT %(limit)s
 """
-SELECT_PARTICIPANTS_QUERY = """
+SELECT_PARTICIPANTS_QUERY_BY_NUM = """
     SELECT
-        id,
-        name,
-        surname,
-        patronymic
-    FROM participants
-"""
-SELECT_EVENT_PARTICIPANTS_QUERY = """
-    SELECT 
         p.id,
         p.name,
         p.surname,
@@ -181,32 +137,40 @@ SELECT_EVENT_PARTICIPANTS_QUERY = """
     FROM event_participants ep
     INNER JOIN participants p ON p.id = ep.participant_id
     WHERE ep.event_id = %(event_id)s
-    ORDER BY ep.registered_at DESC
+    ORDER BY p.id DESC, ep.registered_at DESC 
+    OFFSET %(offset)s LIMIT %(limit)s
 """
-SELECT_PARTICIPANT_EVENTS_QUERY = """
+SELECT_EVENTS_QUERY_BY_ID = """
     SELECT
-        e.id,
-        e.name,
-        e.description,
-        e.type,
-        e.registration_start,
-        e.registration_end,
-        e.holding_start,
-        e.holding_end,
-        e.created_at,
-        e.organizers,
-        e.rules,
-        e.FAQ,
-        e.status
-    FROM event_participants ep
-    INNER JOIN events e ON e.id = ep.event_id
-    WHERE ep.participant_id = %(participant_id)s
-    ORDER BY ep.registered_at DESC
+        id,
+        name,
+        description,
+        type,
+        registration_start,
+        registration_end,
+        holding_start,
+        holding_end,
+        created_at,
+        organizers,
+        rules,
+        FAQ,
+        status
+    FROM events
+    WHERE (id>%(id)s)
+    ORDER BY created_at DESC, id DESC
+    LIMIT %(limit)s
 """
-
-
-CHECK_REGISTRATION_QUERY = """
-    SELECT COUNT(*)
-    FROM event_participants
-    WHERE event_id=%(event_id)s and participant_id=%(participant_id)s
+SELECT_PARTICIPANTS_QUERY_BY_ID = """
+    SELECT
+        p.id,
+        p.name,
+        p.surname,
+        p.patronymic,
+        ep.have_team,
+        ep.registered_at
+    FROM event_participants ep
+    INNER JOIN participants p ON p.id = ep.participant_id
+    WHERE (p.id>%(participant_id)s) AND ep.event_id = %(event_id)s
+    ORDER BY p.id DESC, ep.registered_at DESC
+    LIMIT %(limit)s
 """
