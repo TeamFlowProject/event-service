@@ -61,7 +61,7 @@ class EventPostgresRepository:
                 async with conn.cursor() as cursor:
                     await cursor.execute(DELETE_EVENT_QUERY, {"id": str(event_id)})
 
-    async def get_event_by_id(self, event_id: uuid.UUID) -> Event | None:
+    async def get_event_by_id(self, event_id: uuid.UUID) -> Event:
         """
         Get a event by id
 
