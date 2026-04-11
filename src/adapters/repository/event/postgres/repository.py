@@ -192,15 +192,17 @@ class EventPostgresRepository:
                     await cursor.execute(
                         REGISTER_PARTICIPANT_QUERY,
                         {
-                             "id": uuid.uuid4(),
+                            "id": uuid.uuid4(),
                             "event_id": str(event_id),
                             "participant_id": str(participant.id),
                             "have_team": False,
-                            "registered_at": datetime.now()
+                            "registered_at": datetime.now(),
                         },
                     )
 
-    async def get_participants_by_id(self, event_id: uuid.UUID, participant_id: uuid.UUID, limit: int) -> list[Participant]:
+    async def get_participants_by_id(
+        self, event_id: uuid.UUID, participant_id: uuid.UUID, limit: int
+    ) -> list[Participant]:
         """
         Get participant page by id
         Args:
@@ -232,7 +234,7 @@ class EventPostgresRepository:
                             name=row.name,
                             surname=row.surname,
                             patronymic=row.patronymic,
-                            have_team=False
+                            have_team=False,
                         )
                         for row in rows
                     ]
@@ -267,7 +269,7 @@ class EventPostgresRepository:
                             name=row.name,
                             surname=row.surname,
                             patronymic=row.patronymic,
-                            have_team=False
+                            have_team=False,
                         )
                         for row in rows
                     ]
