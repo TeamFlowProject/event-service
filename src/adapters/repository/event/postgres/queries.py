@@ -11,7 +11,7 @@ CREATE_EVENT_QUERY = """
         created_at,
         organizers,
         rules,
-        FAQ,
+        faq,
         status
     ) 
     VALUES 
@@ -27,7 +27,7 @@ CREATE_EVENT_QUERY = """
         %(created_at)s,
         %(organizers)s,
         %(rules)s,
-        %(FAQ)s,
+        %(faq)s,
         %(status)s
     )
 """
@@ -44,7 +44,9 @@ CREATE_PARTICIPANT_QUERY = """
         %(name)s,
         %(surname)s,
         %(patronymic)s
-    )      
+    )  
+    ON CONFLICT (name, surname, patronymic) 
+    DO NOTHING  
 """
 REGISTER_PARTICIPANT_QUERY = """
     INSERT INTO event_participants (
@@ -77,7 +79,7 @@ UPDATE_EVENT_QUERY = """
         holding_end=%(holding_end)s,
         organizers=%(organizers)s,
         rules=%(rules)s,
-        FAQ=%(FAQ)s,
+        faq=%(faq)s,
         status=%(status)s
     WHERE id=%(id)s
     RETURNING id
@@ -102,7 +104,7 @@ SELECT_EVENT_QUERY = """
         created_at,
         organizers,
         rules,
-        FAQ,
+        faq,
         status
     FROM events
     WHERE id=%(id)s
@@ -120,7 +122,7 @@ SELECT_EVENTS_QUERY_BY_NUM = """
         created_at,
         organizers,
         rules,
-        FAQ,
+        faq,
         status
     FROM events
     ORDER BY created_at DESC
@@ -132,8 +134,7 @@ SELECT_PARTICIPANTS_QUERY_BY_NUM = """
         p.name,
         p.surname,
         p.patronymic,
-        ep.have_team,
-        ep.registered_at
+        ep.have_team
     FROM event_participants ep
     INNER JOIN participants p ON p.id = ep.participant_id
     WHERE ep.event_id = %(event_id)s
@@ -153,10 +154,10 @@ SELECT_EVENTS_QUERY_BY_ID = """
         created_at,
         organizers,
         rules,
-        FAQ,
+        faq,
         status
     FROM events
-    WHERE (id>%(id)s)
+    WHERE created_at < (SELECT created_at FROM events WHERE id = %(id)s)
     ORDER BY created_at DESC, id DESC
     LIMIT %(limit)s
 """
@@ -166,11 +167,10 @@ SELECT_PARTICIPANTS_QUERY_BY_ID = """
         p.name,
         p.surname,
         p.patronymic,
-        ep.have_team,
-        ep.registered_at
+        ep.have_team
     FROM event_participants ep
     INNER JOIN participants p ON p.id = ep.participant_id
-    WHERE (p.id>%(participant_id)s) AND ep.event_id = %(event_id)s
+    WHERE ep.registered_at < (SELECT registered_at FROM event_participants WHERE participant_id = %(participant_id)s AND event_id = %(event_id)s) AND ep.event_id = %(event_id)s
     ORDER BY p.id DESC, ep.registered_at DESC
     LIMIT %(limit)s
 """

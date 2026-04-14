@@ -31,7 +31,7 @@ class Event:
 
     organizers: list[str]
     rules: str
-    FAQ: str
+    faq: str
     status: EventStatusEnum
 
 

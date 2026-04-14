@@ -20,7 +20,7 @@ class EventRow:
 
     organizers: list[str]
     rules: str
-    FAQ: str
+    faq: str
     status: EventStatusEnum
 
 
@@ -37,5 +37,4 @@ class EventParticipantRow:
     id: uuid.UUID
     event_id: uuid.UUID
     participant_id: uuid.UUID
-    have_team: bool
     registered_at: datetime

@@ -34,3 +34,23 @@ async def pool(postgres_container):
 @pytest_asyncio.fixture()
 async def track_repository(pool):
     return TrackPostgresRepository(pool)
+
+
+@pytest_asyncio.fixture()
+async def event_repository(pool):
+    from src.adapters.repository.event.postgres.repository import (
+        EventPostgresRepository,
+    )
+
+    return EventPostgresRepository(pool)
+
+
+@pytest_asyncio.fixture()
+async def cleanup(pool):
+    yield
+    async with pool.connection() as conn:
+        await conn.execute("DELETE FROM event_participants")
+        await conn.execute("DELETE FROM participants")
+        await conn.execute("DELETE FROM tracks")
+        await conn.execute("DELETE FROM roles")
+        await conn.execute("DELETE FROM events")

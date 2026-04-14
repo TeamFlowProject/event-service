@@ -33,9 +33,8 @@ class EventPostgresRepository:
         """
 
         async with self._pool.connection() as conn:
-            async with conn.transaction():
-                async with conn.cursor() as cursor:
-                    await cursor.execute(CREATE_EVENT_QUERY, event.__dict__)
+            async with conn.cursor() as cursor:
+                await cursor.execute(CREATE_EVENT_QUERY, event.__dict__)
 
     async def update_event(self, event: Event) -> None:
         """
@@ -45,9 +44,8 @@ class EventPostgresRepository:
         """
 
         async with self._pool.connection() as conn:
-            async with conn.transaction():
-                async with conn.cursor() as cursor:
-                    await cursor.execute(UPDATE_EVENT_QUERY, event.__dict__)
+            async with conn.cursor() as cursor:
+                await cursor.execute(UPDATE_EVENT_QUERY, event.__dict__)
 
     async def delete_event(self, event_id: uuid.UUID) -> None:
         """
@@ -57,9 +55,8 @@ class EventPostgresRepository:
         """
 
         async with self._pool.connection() as conn:
-            async with conn.transaction():
-                async with conn.cursor() as cursor:
-                    await cursor.execute(DELETE_EVENT_QUERY, {"id": str(event_id)})
+            async with conn.cursor() as cursor:
+                await cursor.execute(DELETE_EVENT_QUERY, {"id": str(event_id)})
 
     async def get_event_by_id(self, event_id: uuid.UUID) -> Event:
         """
@@ -72,30 +69,29 @@ class EventPostgresRepository:
             Event: The event with the given id
         """
         async with self._pool.connection() as conn:
-            async with conn.transaction():
-                async with conn.cursor(
-                    row_factory=psycopg.rows.class_row(EventRow)
-                ) as cursor:
-                    await cursor.execute(SELECT_EVENT_QUERY, {"id": str(event_id)})
-                    row = await cursor.fetchone()
-                    if row is None:
-                        raise EventNotFoundError(f"Event with id {event_id} not found")
+            async with conn.cursor(
+                row_factory=psycopg.rows.class_row(EventRow)
+            ) as cursor:
+                await cursor.execute(SELECT_EVENT_QUERY, {"id": str(event_id)})
+                row = await cursor.fetchone()
+                if row is None:
+                    raise EventNotFoundError(f"Event with id {event_id} not found")
 
-                    return Event(
-                        id=row.id,
-                        name=row.name,
-                        description=row.description,
-                        type=row.type,
-                        registration_start=row.registration_start,
-                        registration_end=row.registration_end,
-                        holding_start=row.holding_start,
-                        holding_end=row.holding_end,
-                        created_at=row.created_at,
-                        organizers=row.organizers,
-                        rules=row.rules,
-                        FAQ=row.FAQ,
-                        status=row.status,
-                    )
+                return Event(
+                    id=row.id,
+                    name=row.name,
+                    description=row.description,
+                    type=row.type,
+                    registration_start=row.registration_start,
+                    registration_end=row.registration_end,
+                    holding_start=row.holding_start,
+                    holding_end=row.holding_end,
+                    created_at=row.created_at,
+                    organizers=row.organizers,
+                    rules=row.rules,
+                    faq=row.faq,
+                    status=row.status,
+                )
 
     async def get_events_page_by_id(
         self, event_id: uuid.UUID, limit: int
@@ -108,33 +104,32 @@ class EventPostgresRepository:
             list[Event]: The events page
         """
         async with self._pool.connection() as conn:
-            async with conn.transaction():
-                async with conn.cursor(
-                    row_factory=psycopg.rows.class_row(EventRow)
-                ) as cursor:
-                    await cursor.execute(
-                        SELECT_EVENTS_QUERY_BY_ID, {"id": str(event_id), "limit": limit}
-                    )
-                    rows = await cursor.fetchall()
+            async with conn.cursor(
+                row_factory=psycopg.rows.class_row(EventRow)
+            ) as cursor:
+                await cursor.execute(
+                    SELECT_EVENTS_QUERY_BY_ID, {"id": str(event_id), "limit": limit}
+                )
+                rows = await cursor.fetchall()
 
-                    return [
-                        Event(
-                            id=row.id,
-                            name=row.name,
-                            description=row.description,
-                            type=row.type,
-                            registration_start=row.registration_start,
-                            registration_end=row.registration_end,
-                            holding_start=row.holding_start,
-                            holding_end=row.holding_end,
-                            created_at=row.created_at,
-                            organizers=row.organizers,
-                            rules=row.rules,
-                            FAQ=row.FAQ,
-                            status=row.status,
-                        )
-                        for row in rows
-                    ]
+                return [
+                    Event(
+                        id=row.id,
+                        name=row.name,
+                        description=row.description,
+                        type=row.type,
+                        registration_start=row.registration_start,
+                        registration_end=row.registration_end,
+                        holding_start=row.holding_start,
+                        holding_end=row.holding_end,
+                        created_at=row.created_at,
+                        organizers=row.organizers,
+                        rules=row.rules,
+                        faq=row.faq,
+                        status=row.status,
+                    )
+                    for row in rows
+                ]
 
     async def get_events_page_by_num(self, offset: int, limit: int) -> list[Event]:
         """
@@ -146,33 +141,32 @@ class EventPostgresRepository:
             list[Event]: The events page
         """
         async with self._pool.connection() as conn:
-            async with conn.transaction():
-                async with conn.cursor(
-                    row_factory=psycopg.rows.class_row(EventRow)
-                ) as cursor:
-                    await cursor.execute(
-                        SELECT_EVENTS_QUERY_BY_NUM, {"offset": offset, "limit": limit}
-                    )
-                    rows = await cursor.fetchall()
+            async with conn.cursor(
+                row_factory=psycopg.rows.class_row(EventRow)
+            ) as cursor:
+                await cursor.execute(
+                    SELECT_EVENTS_QUERY_BY_NUM, {"offset": offset, "limit": limit}
+                )
+                rows = await cursor.fetchall()
 
-                    return [
-                        Event(
-                            id=row.id,
-                            name=row.name,
-                            description=row.description,
-                            type=row.type,
-                            registration_start=row.registration_start,
-                            registration_end=row.registration_end,
-                            holding_start=row.holding_start,
-                            holding_end=row.holding_end,
-                            created_at=row.created_at,
-                            organizers=row.organizers,
-                            rules=row.rules,
-                            FAQ=row.FAQ,
-                            status=row.status,
-                        )
-                        for row in rows
-                    ]
+                return [
+                    Event(
+                        id=row.id,
+                        name=row.name,
+                        description=row.description,
+                        type=row.type,
+                        registration_start=row.registration_start,
+                        registration_end=row.registration_end,
+                        holding_start=row.holding_start,
+                        holding_end=row.holding_end,
+                        created_at=row.created_at,
+                        organizers=row.organizers,
+                        rules=row.rules,
+                        faq=row.faq,
+                        status=row.status,
+                    )
+                    for row in rows
+                ]
 
     async def add_participant(
         self, event_id: uuid.UUID, participant: Participant
@@ -213,31 +207,28 @@ class EventPostgresRepository:
             list[Participant]: The participant page
         """
         async with self._pool.connection() as conn:
-            async with conn.transaction():
-                async with conn.cursor(
-                    row_factory=psycopg.rows.class_row(ParticipantRow)
-                ) as cursor:
-                    await cursor.execute(
-                        SELECT_PARTICIPANTS_QUERY_BY_ID,
-                        {
-                            "event_id": str(event_id),
-                            "participant_id": str(participant_id),
-                            "limit": limit,
-                        },
-                    )
-                    rows = await cursor.fetchall()
+            async with conn.cursor() as cursor:
+                await cursor.execute(
+                    SELECT_PARTICIPANTS_QUERY_BY_ID,
+                    {
+                        "event_id": str(event_id),
+                        "participant_id": str(participant_id),
+                        "limit": limit,
+                    },
+                )
+                rows = await cursor.fetchall()
 
-                    return [
-                        Participant(
-                            id=row.id,
-                            event_id=event_id,
-                            name=row.name,
-                            surname=row.surname,
-                            patronymic=row.patronymic,
-                            have_team=False,
-                        )
-                        for row in rows
-                    ]
+                return [
+                    Participant(
+                        id=row[0],
+                        event_id=event_id,
+                        name=row[1],
+                        surname=row[2],
+                        patronymic=row[3],
+                        have_team=row[4],
+                    )
+                    for row in rows
+                ]
 
     async def get_participants_by_num(
         self, event_id: uuid.UUID, offset: int, limit: int
@@ -252,24 +243,21 @@ class EventPostgresRepository:
             list[Participant]: The participants page
         """
         async with self._pool.connection() as conn:
-            async with conn.transaction():
-                async with conn.cursor(
-                    row_factory=psycopg.rows.class_row(ParticipantRow)
-                ) as cursor:
-                    await cursor.execute(
-                        SELECT_PARTICIPANTS_QUERY_BY_NUM,
-                        {"event_id": str(event_id), "offset": offset, "limit": limit},
-                    )
-                    rows = await cursor.fetchall()
+            async with conn.cursor() as cursor:
+                await cursor.execute(
+                    SELECT_PARTICIPANTS_QUERY_BY_NUM,
+                    {"event_id": str(event_id), "offset": offset, "limit": limit},
+                )
+                rows = await cursor.fetchall()
 
-                    return [
-                        Participant(
-                            id=row.id,
-                            event_id=event_id,
-                            name=row.name,
-                            surname=row.surname,
-                            patronymic=row.patronymic,
-                            have_team=False,
-                        )
-                        for row in rows
-                    ]
+                return [
+                    Participant(
+                        id=row[0],
+                        event_id=event_id,
+                        name=row[1],
+                        surname=row[2],
+                        patronymic=row[3],
+                        have_team=row[4],
+                    )
+                    for row in rows
+                ]

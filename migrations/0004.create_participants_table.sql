@@ -6,3 +6,6 @@ CREATE TABLE IF NOT EXISTS participants (
     surname     VARCHAR(255) NOT NULL,
     patronymic  VARCHAR(255) NOT NULL
 );
+
+ALTER TABLE participants
+ADD CONSTRAINT unique_participant UNIQUE (name, surname, patronymic);

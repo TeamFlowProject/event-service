@@ -23,7 +23,7 @@ def make_event(**kwargs) -> Event:
         created_at=datetime.now(),
         organizers=["Organizer 1", "Organizer 2"],
         rules="No cheating",
-        FAQ="FAQ content",
+        faq="faq content",
         status=EventStatusEnum.DRAFT,
     )
     defaults.update(kwargs)

@@ -5,7 +5,7 @@ import pytest
 import pytest_asyncio
 
 from src.adapters.repository.errors import EventNotFoundError
-from src.models.event import Event, EventTypeEnum, EventStatusEnum
+from src.models.event import Event, EventTypeEnum, EventStatusEnum, Participant
 
 
 @pytest_asyncio.fixture
@@ -30,8 +30,20 @@ def _make_event() -> Event:
         created_at=datetime.now(timezone.utc),
         organizers=["Organizer 1", "Organizer 2"],
         rules="Some rules",
-        FAQ="Some FAQ",
+        faq="Some faq",
         status=EventStatusEnum.DRAFT,
+    )
+
+
+def _make_participant(event_id: uuid.UUID) -> Participant:
+    participant_id = uuid.uuid4()
+    return Participant(
+        id=participant_id,
+        event_id=event_id,
+        name=f"Name {participant_id}",
+        surname=f"Surname {participant_id}",
+        patronymic=f"Patronymic {participant_id}",
+        have_team=False,
     )
 
 
@@ -56,7 +68,7 @@ class TestEventPostgresRepository:
         assert result.created_at == event.created_at
         assert result.organizers == event.organizers
         assert result.rules == event.rules
-        assert result.FAQ == event.FAQ
+        assert result.faq == event.faq
         assert result.status == EventStatusEnum.DRAFT
 
     @pytest.mark.asyncio
@@ -158,8 +170,112 @@ class TestEventPostgresRepository:
         assert len(page) == 2
 
     @pytest.mark.asyncio
+    async def test_get_events_page_by_offset_then_id_has_distinct_pages(
+        self, event_repository
+    ):
+        events = [_make_event() for _ in range(15)]
+        for event in events:
+            await event_repository.create_event(event)
+
+        first_page = await event_repository.get_events_page_by_num(offset=0, limit=5)
+        second_page = await event_repository.get_events_page_by_id(
+            event_id=first_page[-1].id, limit=5
+        )
+        third_page = await event_repository.get_events_page_by_id(
+            event_id=second_page[-1].id, limit=5
+        )
+
+        assert len(first_page) == 5
+        assert len(second_page) == 5
+        assert len(third_page) == 5
+        assert {event.id for event in first_page}.isdisjoint(
+            {event.id for event in second_page}
+        )
+        assert {event.id for event in second_page}.isdisjoint(
+            {event.id for event in third_page}
+        )
+        assert {event.id for event in first_page}.isdisjoint(
+            {event.id for event in third_page}
+        )
+
+    @pytest.mark.asyncio
     async def test_get_events_page_by_id_empty(self, event_repository):
         page = await event_repository.get_events_page_by_id(
             event_id=uuid.uuid4(), limit=10
         )
+        assert page == []
+
+    @pytest.mark.asyncio
+    async def test_add_and_get_participants(self, event_repository):
+        event = _make_event()
+        await event_repository.create_event(event)
+
+        participants = [_make_participant(event.id) for _ in range(3)]
+        for participant in participants:
+            await event_repository.add_participant(event.id, participant)
+
+        page = await event_repository.get_participants_by_num(
+            event_id=event.id, offset=0, limit=10
+        )
+
+        assert len(page) == 3
+        assert {participant.id for participant in page} == {
+            participant.id for participant in participants
+        }
+        assert all(participant.event_id == event.id for participant in page)
+        assert all(participant.have_team is False for participant in page)
+
+    @pytest.mark.asyncio
+    async def test_get_participants_by_num_with_offset(self, event_repository):
+        event = _make_event()
+        await event_repository.create_event(event)
+
+        participants = [_make_participant(event.id) for _ in range(5)]
+        for participant in participants:
+            await event_repository.add_participant(event.id, participant)
+
+        first_page = await event_repository.get_participants_by_num(
+            event_id=event.id, offset=0, limit=2
+        )
+        second_page = await event_repository.get_participants_by_num(
+            event_id=event.id, offset=2, limit=2
+        )
+
+        assert len(first_page) == 2
+        assert len(second_page) == 2
+        assert {participant.id for participant in first_page}.isdisjoint(
+            {participant.id for participant in second_page}
+        )
+
+    @pytest.mark.asyncio
+    async def test_get_participants_by_id_limit(self, event_repository):
+        event = _make_event()
+        await event_repository.create_event(event)
+
+        participants = [_make_participant(event.id) for _ in range(5)]
+        for participant in participants:
+            await event_repository.add_participant(event.id, participant)
+
+        first_page = await event_repository.get_participants_by_num(
+            event_id=event.id, offset=0, limit=2
+        )
+        page_by_id = await event_repository.get_participants_by_id(
+            event_id=event.id, participant_id=first_page[-1].id, limit=2
+        )
+
+        assert len(page_by_id) == 2
+        assert first_page[-1].id not in {participant.id for participant in page_by_id}
+        assert {participant.id for participant in first_page}.isdisjoint(
+            {participant.id for participant in page_by_id}
+        )
+
+    @pytest.mark.asyncio
+    async def test_get_participants_by_id_empty(self, event_repository):
+        event = _make_event()
+        await event_repository.create_event(event)
+
+        page = await event_repository.get_participants_by_id(
+            event_id=event.id, participant_id=uuid.uuid4(), limit=10
+        )
+
         assert page == []
