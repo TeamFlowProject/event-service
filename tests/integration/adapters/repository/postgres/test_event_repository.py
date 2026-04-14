@@ -149,7 +149,8 @@ class TestEventPostgresRepository:
         for event in events:
             await event_repository.create_event(event)
 
-        first_event = events[0]
+        first_page = await event_repository.get_events_page_by_num(offset=0, limit=1)
+        first_event = first_page[0]
         page = await event_repository.get_events_page_by_id(
             event_id=first_event.id, limit=10
         )
@@ -162,7 +163,8 @@ class TestEventPostgresRepository:
         for event in events:
             await event_repository.create_event(event)
 
-        first_event = events[0]
+        first_page = await event_repository.get_events_page_by_num(offset=0, limit=1)
+        first_event = first_page[0]
         page = await event_repository.get_events_page_by_id(
             event_id=first_event.id, limit=2
         )

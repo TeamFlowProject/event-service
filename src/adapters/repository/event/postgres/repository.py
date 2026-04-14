@@ -4,7 +4,7 @@ import psycopg.rows
 import psycopg_pool
 
 from src.adapters.repository.errors import EventNotFoundError
-from src.adapters.repository.event.postgres.models import EventRow, ParticipantRow
+from src.adapters.repository.event.postgres.models import EventRow
 from src.adapters.repository.event.postgres.queries import (
     CREATE_EVENT_QUERY,
     UPDATE_EVENT_QUERY,
@@ -46,6 +46,9 @@ class EventPostgresRepository:
         async with self._pool.connection() as conn:
             async with conn.cursor() as cursor:
                 await cursor.execute(UPDATE_EVENT_QUERY, event.__dict__)
+                row = await cursor.fetchone()
+                if row is None:
+                    raise EventNotFoundError(f"Event with id {event.id} not found")
 
     async def delete_event(self, event_id: uuid.UUID) -> None:
         """
@@ -57,6 +60,9 @@ class EventPostgresRepository:
         async with self._pool.connection() as conn:
             async with conn.cursor() as cursor:
                 await cursor.execute(DELETE_EVENT_QUERY, {"id": str(event_id)})
+                row = await cursor.fetchone()
+                if row is None:
+                    raise EventNotFoundError(f"Event with id {event_id} not found")
 
     async def get_event_by_id(self, event_id: uuid.UUID) -> Event:
         """

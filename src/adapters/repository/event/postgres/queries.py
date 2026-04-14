@@ -157,7 +157,9 @@ SELECT_EVENTS_QUERY_BY_ID = """
         faq,
         status
     FROM events
-    WHERE created_at < (SELECT created_at FROM events WHERE id = %(id)s)
+    WHERE (created_at, id) < (
+        SELECT created_at, id FROM events WHERE id = %(id)s
+    )
     ORDER BY created_at DESC, id DESC
     LIMIT %(limit)s
 """
@@ -170,7 +172,8 @@ SELECT_PARTICIPANTS_QUERY_BY_ID = """
         ep.have_team
     FROM event_participants ep
     INNER JOIN participants p ON p.id = ep.participant_id
-    WHERE ep.registered_at < (SELECT registered_at FROM event_participants WHERE participant_id = %(participant_id)s AND event_id = %(event_id)s) AND ep.event_id = %(event_id)s
+    WHERE p.id < %(participant_id)s
+      AND ep.event_id = %(event_id)s
     ORDER BY p.id DESC, ep.registered_at DESC
     LIMIT %(limit)s
 """
