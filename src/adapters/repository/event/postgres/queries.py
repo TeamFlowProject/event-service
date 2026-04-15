@@ -38,19 +38,18 @@ CREATE_PARTICIPANT_QUERY = """
         surname,
         patronymic
     )
-    VALUES 
+    VALUES
     (
         %(id)s,
         %(name)s,
         %(surname)s,
         %(patronymic)s
-    )  
-    ON CONFLICT (name, surname, patronymic) 
-    DO NOTHING  
+    )
+    ON CONFLICT (id)
+    DO NOTHING
 """
 REGISTER_PARTICIPANT_QUERY = """
     INSERT INTO event_participants (
-        id,
         event_id,
         participant_id,
         have_team,
@@ -58,7 +57,6 @@ REGISTER_PARTICIPANT_QUERY = """
     )
     VALUES
     (
-        %(id)s,
         %(event_id)s,
         %(participant_id)s,
         %(have_team)s,
@@ -69,7 +67,7 @@ REGISTER_PARTICIPANT_QUERY = """
 
 UPDATE_EVENT_QUERY = """
     UPDATE events
-    SET 
+    SET
         name=%(name)s,
         description=%(description)s,
         type=%(type)s,
@@ -125,7 +123,7 @@ SELECT_EVENTS_QUERY_BY_NUM = """
         faq,
         status
     FROM events
-    ORDER BY created_at DESC
+    ORDER BY id DESC
     OFFSET %(offset)s LIMIT %(limit)s
 """
 SELECT_PARTICIPANTS_QUERY_BY_NUM = """
@@ -138,7 +136,7 @@ SELECT_PARTICIPANTS_QUERY_BY_NUM = """
     FROM event_participants ep
     INNER JOIN participants p ON p.id = ep.participant_id
     WHERE ep.event_id = %(event_id)s
-    ORDER BY p.id DESC, ep.registered_at DESC 
+    ORDER BY p.id DESC
     OFFSET %(offset)s LIMIT %(limit)s
 """
 SELECT_EVENTS_QUERY_BY_ID = """
@@ -157,10 +155,8 @@ SELECT_EVENTS_QUERY_BY_ID = """
         faq,
         status
     FROM events
-    WHERE (created_at, id) < (
-        SELECT created_at, id FROM events WHERE id = %(id)s
-    )
-    ORDER BY created_at DESC, id DESC
+    WHERE id < %(id)s
+    ORDER BY id DESC
     LIMIT %(limit)s
 """
 SELECT_PARTICIPANTS_QUERY_BY_ID = """
@@ -174,6 +170,6 @@ SELECT_PARTICIPANTS_QUERY_BY_ID = """
     INNER JOIN participants p ON p.id = ep.participant_id
     WHERE p.id < %(participant_id)s
       AND ep.event_id = %(event_id)s
-    ORDER BY p.id DESC, ep.registered_at DESC
+    ORDER BY p.id DESC
     LIMIT %(limit)s
 """

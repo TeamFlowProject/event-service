@@ -38,7 +38,7 @@ class EventService:
         event_id: Optional[uuid.UUID] = None,
         offset: Optional[int] = None,
         limit: int = 10,
-    ) -> list[Event]:
+    ) -> tuple[list[Event], Optional[uuid.UUID]]:
         """
         Get events with pagination
 
@@ -50,7 +50,7 @@ class EventService:
             limit (int): Maximum number of events to return
 
         Returns:
-            list[Event]: The events matching the criteria
+            tuple[list[Event], Optional[uuid.UUID]]: The events and cursor
 
         Raises:
             PaginationError: If both or neither of event_id and offset are specified
@@ -84,8 +84,6 @@ class EventService:
         Raises:
             EventCreationError: If the event could not be created
         """
-        event.id = uuid.uuid4()
-
         await self._event_repository.create_event(event)
         await self._kafka_producer.send_create_event(event)
 
@@ -139,7 +137,6 @@ class EventService:
             EventNotFoundError: If the event could not be found
             ParticipantError: If the participant could not be added (event not OPEN)
         """
-        participant.id = uuid.uuid4()
         event = await self.get_event_by_id(event_id)
 
         if event.status == EventStatusEnum.OPEN:
@@ -154,7 +151,7 @@ class EventService:
         offset: Optional[int] = None,
         participant_id: Optional[uuid.UUID] = None,
         limit: int = 10,
-    ) -> list[Participant]:
+    ) -> tuple[list[Participant], Optional[uuid.UUID]]:
         """
         Get participants for an event
 

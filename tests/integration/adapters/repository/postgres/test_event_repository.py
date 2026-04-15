@@ -3,23 +3,16 @@ from datetime import datetime, timezone
 
 import pytest
 import pytest_asyncio
+from typing import cast
+from uuid_extensions import uuid7
 
 from src.adapters.repository.errors import EventNotFoundError
 from src.models.event import Event, EventTypeEnum, EventStatusEnum, Participant
 
 
-@pytest_asyncio.fixture
-async def cleanup(pool):
-    yield
-    async with pool.connection() as conn:
-        await conn.execute("DELETE FROM event_participants")
-        await conn.execute("DELETE FROM participants")
-        await conn.execute("DELETE FROM events")
-
-
 def _make_event() -> Event:
     return Event(
-        id=uuid.uuid4(),
+        id=cast(uuid.UUID, uuid7()),
         name="Test Event",
         description="Test Description",
         type=EventTypeEnum.HACKATHON,
@@ -36,7 +29,7 @@ def _make_event() -> Event:
 
 
 def _make_participant(event_id: uuid.UUID) -> Participant:
-    participant_id = uuid.uuid4()
+    participant_id = cast(uuid.UUID, uuid7())
     return Participant(
         id=participant_id,
         event_id=event_id,
@@ -74,7 +67,7 @@ class TestEventPostgresRepository:
     @pytest.mark.asyncio
     async def test_get_event_not_found(self, event_repository):
         with pytest.raises(EventNotFoundError):
-            await event_repository.get_event_by_id(uuid.uuid4())
+            await event_repository.get_event_by_id(cast(uuid.UUID, uuid7()))
 
     @pytest.mark.asyncio
     async def test_update_event(self, event_repository):
@@ -113,7 +106,7 @@ class TestEventPostgresRepository:
     @pytest.mark.asyncio
     async def test_delete_event_not_found(self, event_repository):
         with pytest.raises(EventNotFoundError):
-            await event_repository.delete_event(uuid.uuid4())
+            await event_repository.delete_event(cast(uuid.UUID, uuid7()))
 
     @pytest.mark.asyncio
     async def test_get_events_page_by_num(self, event_repository):
@@ -121,9 +114,10 @@ class TestEventPostgresRepository:
         for event in events:
             await event_repository.create_event(event)
 
-        page = await event_repository.get_events_page_by_num(offset=0, limit=3)
+        page, cursor = await event_repository.get_events_page_by_num(offset=0, limit=3)
 
         assert len(page) == 3
+        assert cursor is not None
 
     @pytest.mark.asyncio
     async def test_get_events_page_by_num_with_offset(self, event_repository):
@@ -131,8 +125,10 @@ class TestEventPostgresRepository:
         for event in events:
             await event_repository.create_event(event)
 
-        first_page = await event_repository.get_events_page_by_num(offset=0, limit=2)
-        second_page = await event_repository.get_events_page_by_num(offset=2, limit=2)
+        first_page, _ = await event_repository.get_events_page_by_num(offset=0, limit=2)
+        second_page, _ = await event_repository.get_events_page_by_num(
+            offset=2, limit=2
+        )
 
         assert len(first_page) == 2
         assert len(second_page) == 2
@@ -140,8 +136,10 @@ class TestEventPostgresRepository:
 
     @pytest.mark.asyncio
     async def test_get_events_page_by_num_empty(self, event_repository):
-        page = await event_repository.get_events_page_by_num(offset=0, limit=10)
+        page, cursor = await event_repository.get_events_page_by_num(offset=0, limit=10)
+
         assert page == []
+        assert cursor is None
 
     @pytest.mark.asyncio
     async def test_get_events_page_by_id(self, event_repository):
@@ -149,9 +147,9 @@ class TestEventPostgresRepository:
         for event in events:
             await event_repository.create_event(event)
 
-        first_page = await event_repository.get_events_page_by_num(offset=0, limit=1)
+        first_page, _ = await event_repository.get_events_page_by_num(offset=0, limit=1)
         first_event = first_page[0]
-        page = await event_repository.get_events_page_by_id(
+        page, _ = await event_repository.get_events_page_by_id(
             event_id=first_event.id, limit=10
         )
 
@@ -163,9 +161,9 @@ class TestEventPostgresRepository:
         for event in events:
             await event_repository.create_event(event)
 
-        first_page = await event_repository.get_events_page_by_num(offset=0, limit=1)
+        first_page, _ = await event_repository.get_events_page_by_num(offset=0, limit=1)
         first_event = first_page[0]
-        page = await event_repository.get_events_page_by_id(
+        page, _ = await event_repository.get_events_page_by_id(
             event_id=first_event.id, limit=2
         )
 
@@ -179,11 +177,11 @@ class TestEventPostgresRepository:
         for event in events:
             await event_repository.create_event(event)
 
-        first_page = await event_repository.get_events_page_by_num(offset=0, limit=5)
-        second_page = await event_repository.get_events_page_by_id(
+        first_page, _ = await event_repository.get_events_page_by_num(offset=0, limit=5)
+        second_page, _ = await event_repository.get_events_page_by_id(
             event_id=first_page[-1].id, limit=5
         )
-        third_page = await event_repository.get_events_page_by_id(
+        third_page, _ = await event_repository.get_events_page_by_id(
             event_id=second_page[-1].id, limit=5
         )
 
@@ -202,10 +200,12 @@ class TestEventPostgresRepository:
 
     @pytest.mark.asyncio
     async def test_get_events_page_by_id_empty(self, event_repository):
-        page = await event_repository.get_events_page_by_id(
-            event_id=uuid.uuid4(), limit=10
+        page, cursor = await event_repository.get_events_page_by_id(
+            event_id=cast(uuid.UUID, uuid7()), limit=10
         )
+
         assert page == []
+        assert cursor is None
 
     @pytest.mark.asyncio
     async def test_add_and_get_participants(self, event_repository):
@@ -216,11 +216,12 @@ class TestEventPostgresRepository:
         for participant in participants:
             await event_repository.add_participant(event.id, participant)
 
-        page = await event_repository.get_participants_by_num(
+        page, cursor = await event_repository.get_participants_by_num(
             event_id=event.id, offset=0, limit=10
         )
 
         assert len(page) == 3
+        assert cursor is not None
         assert {participant.id for participant in page} == {
             participant.id for participant in participants
         }
@@ -236,10 +237,10 @@ class TestEventPostgresRepository:
         for participant in participants:
             await event_repository.add_participant(event.id, participant)
 
-        first_page = await event_repository.get_participants_by_num(
+        first_page, _ = await event_repository.get_participants_by_num(
             event_id=event.id, offset=0, limit=2
         )
-        second_page = await event_repository.get_participants_by_num(
+        second_page, _ = await event_repository.get_participants_by_num(
             event_id=event.id, offset=2, limit=2
         )
 
@@ -250,6 +251,18 @@ class TestEventPostgresRepository:
         )
 
     @pytest.mark.asyncio
+    async def test_get_participants_by_num_empty(self, event_repository):
+        event = _make_event()
+        await event_repository.create_event(event)
+
+        page, cursor = await event_repository.get_participants_by_num(
+            event_id=event.id, offset=0, limit=10
+        )
+
+        assert page == []
+        assert cursor is None
+
+    @pytest.mark.asyncio
     async def test_get_participants_by_id_limit(self, event_repository):
         event = _make_event()
         await event_repository.create_event(event)
@@ -258,10 +271,10 @@ class TestEventPostgresRepository:
         for participant in participants:
             await event_repository.add_participant(event.id, participant)
 
-        first_page = await event_repository.get_participants_by_num(
+        first_page, _ = await event_repository.get_participants_by_num(
             event_id=event.id, offset=0, limit=2
         )
-        page_by_id = await event_repository.get_participants_by_id(
+        page_by_id, _ = await event_repository.get_participants_by_id(
             event_id=event.id, participant_id=first_page[-1].id, limit=2
         )
 
@@ -272,12 +285,41 @@ class TestEventPostgresRepository:
         )
 
     @pytest.mark.asyncio
+    async def test_get_participants_by_offset_then_id_has_distinct_pages(
+        self, event_repository
+    ):
+        event = _make_event()
+        await event_repository.create_event(event)
+
+        participants = [_make_participant(event.id) for _ in range(15)]
+        for participant in participants:
+            await event_repository.add_participant(event.id, participant)
+
+        first_page, _ = await event_repository.get_participants_by_num(
+            event_id=event.id, offset=0, limit=5
+        )
+        second_page, _ = await event_repository.get_participants_by_id(
+            event_id=event.id, participant_id=first_page[-1].id, limit=5
+        )
+        third_page, _ = await event_repository.get_participants_by_id(
+            event_id=event.id, participant_id=second_page[-1].id, limit=5
+        )
+
+        assert len(first_page) == 5
+        assert len(second_page) == 5
+        assert len(third_page) == 5
+        assert {p.id for p in first_page}.isdisjoint({p.id for p in second_page})
+        assert {p.id for p in second_page}.isdisjoint({p.id for p in third_page})
+        assert {p.id for p in first_page}.isdisjoint({p.id for p in third_page})
+
+    @pytest.mark.asyncio
     async def test_get_participants_by_id_empty(self, event_repository):
         event = _make_event()
         await event_repository.create_event(event)
 
-        page = await event_repository.get_participants_by_id(
-            event_id=event.id, participant_id=uuid.uuid4(), limit=10
+        page, cursor = await event_repository.get_participants_by_id(
+            event_id=event.id, participant_id=cast(uuid.UUID, uuid7()), limit=10
         )
 
         assert page == []
+        assert cursor is None
