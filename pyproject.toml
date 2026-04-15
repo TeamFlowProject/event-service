@@ -17,6 +17,7 @@ dependencies = [
     "loguru>=0.7.0",
     "yoyo-migrations>=9.0.0",
     "psycopg-pool>=3.3.0",
+    "uuid7>=0.1.0",
 ]
 
 [tool.pytest.ini_options]

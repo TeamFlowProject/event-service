@@ -1,10 +1,10 @@
 import uuid
 
-
 import psycopg.rows
+from psycopg.errors import ForeignKeyViolation
 import psycopg_pool
 
-from src.models.track import Track, Role
+from src.models.track import Track, Role, TrackStatusEnum
 from src.adapters.repository.track.postgres.queries import (
     CREATE_TRACK_QUERY,
     CREATE_ROLES_QUERY,
@@ -18,7 +18,7 @@ from src.adapters.repository.track.postgres.queries import (
     SELECT_TRACKS_BY_EVENT_ID_QUERY,
     SELECT_ROLES_BY_EVENT_ID_QUERY,
 )
-from src.adapters.repository.errors import TrackNotFoundError
+from src.adapters.repository.errors import TrackNotFoundError, EventNotFoundError
 from .models import TrackRow, RoleRow
 
 
@@ -32,21 +32,27 @@ class TrackPostgresRepository:
 
         Args:
             track (Track): The track to create
+
+        Raises:
+            EventNotFoundError: If the referenced event does not exist
         """
 
-        async with self._pool.connection() as conn:
-            async with conn.transaction():
-                async with conn.cursor() as cursor:
-                    await cursor.execute(
-                        CREATE_TRACK_QUERY,
-                        track.__dict__,
-                    )
-
-                    if track.required_roles:
-                        await cursor.executemany(
-                            CREATE_ROLES_QUERY,
-                            [role.__dict__ for role in track.required_roles],
+        try:
+            async with self._pool.connection() as conn:
+                async with conn.transaction():
+                    async with conn.cursor() as cursor:
+                        await cursor.execute(
+                            CREATE_TRACK_QUERY,
+                            track.__dict__,
                         )
+
+                        if track.required_roles:
+                            await cursor.executemany(
+                                CREATE_ROLES_QUERY,
+                                [role.__dict__ for role in track.required_roles],
+                            )
+        except ForeignKeyViolation:
+            raise EventNotFoundError(f"Event with id {track.event_id} not found")
 
     async def update_track(self, track: Track):
         """
@@ -148,7 +154,7 @@ class TrackPostgresRepository:
                     min_team_size=row.min_team_size,
                     max_team_size=row.max_team_size,
                     requirements=row.requirements,
-                    status=row.status,
+                    status=TrackStatusEnum(row.status),
                     registration_deadline=row.registration_deadline,
                     required_roles=roles,
                 )
@@ -204,7 +210,7 @@ class TrackPostgresRepository:
                         min_team_size=row.min_team_size,
                         max_team_size=row.max_team_size,
                         requirements=row.requirements,
-                        status=row.status,
+                        status=TrackStatusEnum(row.status),
                         registration_deadline=row.registration_deadline,
                         required_roles=roles_by_track.get(row.id, []),
                     )
