@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 import pytest
 import pytest_asyncio
 
-from src.adapters.repository.errors import TrackNotFoundError
+from src.adapters.repository.errors import EventNotFoundError, TrackNotFoundError
 from src.models.track import Role, Track, TrackStatusEnum
 
 
@@ -145,3 +145,12 @@ class TestTrackPostgresRepository:
     async def test_get_tracks_by_event_id_empty(self, track_repository):
         results = await track_repository.get_tracks_by_event_id(uuid.uuid4())
         assert results == []
+
+    @pytest.mark.asyncio
+    async def test_create_track_raises_event_not_found_for_unknown_event(
+        self, track_repository
+    ):
+        track = _make_track(uuid.uuid4())
+
+        with pytest.raises(EventNotFoundError):
+            await track_repository.create_track(track)

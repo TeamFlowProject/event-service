@@ -25,10 +25,14 @@ class TrackService:
             uuid.UUID: The ID of the created track
 
         Raises:
-            TrackNotFoundError: If the track could not be created
+            EventNotFoundError: If the referenced event does not exist
         """
 
-        await self._track_repository.create_track(track)
+        try:
+            await self._track_repository.create_track(track)
+        except adapter_errors.EventNotFoundError as e:
+            raise service_errors.EventNotFoundError("Event not found") from e
+
         await self._kafka_producer.send_create_track(track)
 
         return track.id
@@ -57,15 +61,16 @@ class TrackService:
         Delete an existing track
 
         Args:
-            id (uuid.UUID): The ID of the track to delete
+            track_id (uuid.UUID): The ID of the track to delete
 
         Raises:
             TrackNotFoundError: If the track could not be deleted
         """
 
         try:
+            track = await self._track_repository.get_track(track_id)
             await self._track_repository.delete_track(track_id)
-            await self._kafka_producer.send_delete_track(track_id)
+            await self._kafka_producer.send_delete_track(track)
         except adapter_errors.TrackNotFoundError as e:
             raise service_errors.TrackNotFoundError("Failed to delete track") from e
 
@@ -81,7 +86,6 @@ class TrackService:
 
         Raises:
             TrackNotFoundError: If the track could not be found
-            RoleNotFoundError: If a role could not be found
         """
 
         try:
@@ -97,14 +101,7 @@ class TrackService:
             event_id (uuid.UUID): The ID of the event to get tracks for
 
         Returns:
-            list[Track]: The tracks for the event
-
-        Raises:
-            EventNotFoundError: If the event could not be found
-            RoleNotFoundError: If a role could not be found
+            list[Track]: The tracks for the event, empty list if event has no tracks
         """
 
-        try:
-            return await self._track_repository.get_tracks_by_event_id(event_id)
-        except adapter_errors.EventNotFoundError as e:
-            raise service_errors.EventNotFoundError("Failed to get tracks") from e
+        return await self._track_repository.get_tracks_by_event_id(event_id)

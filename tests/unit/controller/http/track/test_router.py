@@ -94,6 +94,17 @@ class TestCreateTrack:
         service.create_track.assert_called_once()
 
     @pytest.mark.asyncio
+    async def test_returns_404_when_event_not_found(self, client, service):
+        from src.service.errors import EventNotFoundError
+
+        service.create_track.side_effect = EventNotFoundError
+
+        async with client as c:
+            resp = await c.post("/api/v1/track", json=make_create_payload())
+
+        assert resp.status_code == 404
+
+    @pytest.mark.asyncio
     async def test_returns_422_when_max_team_size_less_than_min(self, client, service):
         async with client as c:
             resp = await c.post(
