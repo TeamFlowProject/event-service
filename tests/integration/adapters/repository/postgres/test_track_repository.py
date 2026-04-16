@@ -4,8 +4,6 @@ from datetime import datetime, timezone
 import pytest
 import pytest_asyncio
 
-from uuid_extensions import uuid7
-
 from src.adapters.repository.errors import TrackNotFoundError
 from src.adapters.repository.event.postgres.repository import EventPostgresRepository
 from src.models.event import Event, EventTypeEnum, EventStatusEnum

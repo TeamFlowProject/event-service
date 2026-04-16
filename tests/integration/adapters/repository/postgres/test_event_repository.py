@@ -2,7 +2,6 @@ import uuid
 from datetime import datetime, timezone
 
 import pytest
-import pytest_asyncio
 from typing import cast
 from uuid_extensions import uuid7
 
