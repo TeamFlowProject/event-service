@@ -6,7 +6,7 @@ from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
 from fastapi import FastAPI
 from loguru import logger
 
-from src.adapters.clients.kafka_producer import KafkaProducerClient
+from src.adapters.clients.kafka_producer import KafkaProducerClient, dto_serializer
 from src.adapters.repository.event.postgres.repository import EventPostgresRepository
 from src.adapters.repository.track.postgres.repository import TrackPostgresRepository
 from src.config import Settings
@@ -29,7 +29,10 @@ async def run_application(settings: Settings) -> None:
     logger.debug("Database connection established")
 
     logger.debug("Starting Kafka producer: {}", settings.kafka_bootstrap)
-    producer = AIOKafkaProducer(bootstrap_servers=settings.kafka_bootstrap)
+    producer = AIOKafkaProducer(
+        bootstrap_servers=settings.kafka_bootstrap,
+        value_serializer=dto_serializer,
+    )
     await producer.start()
     kafka_producer = KafkaProducerClient(producer)
     logger.debug("Kafka producer started")

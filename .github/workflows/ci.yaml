@@ -11,7 +11,7 @@ on:
 jobs:
   lint:
     uses: TeamFlowProject/cicd-templates/.github/workflows/python-lint-ci.yaml@main
-  
+
   unit-tests:
     uses: TeamFlowProject/cicd-templates/.github/workflows/python-test-ci.yaml@main
     needs: lint

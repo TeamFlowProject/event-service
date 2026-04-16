@@ -11,7 +11,10 @@ unit-test:
 
 .PHONY: integration-test
 integration-test:
-	uv run pytest --cov=src
+	uv run pytest --cov=src -m integration
+
+.PHONY: test
+test: unit-test integration-test
 
 .PHONY: migrate-up
 migrate-up:

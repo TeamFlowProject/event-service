@@ -5,8 +5,21 @@ import pytest
 from typing import cast
 from uuid_extensions import uuid7
 
+import pytest_asyncio
+
 from src.adapters.repository.errors import EventNotFoundError
 from src.models.event import Event, EventTypeEnum, EventStatusEnum, Participant
+
+
+@pytest_asyncio.fixture()
+async def cleanup(pool):
+    yield
+    async with pool.connection() as conn:
+        await conn.execute("DELETE FROM event_participants")
+        await conn.execute("DELETE FROM participants")
+        await conn.execute("DELETE FROM tracks")
+        await conn.execute("DELETE FROM roles")
+        await conn.execute("DELETE FROM events")
 
 
 def _make_event() -> Event:
@@ -299,7 +312,7 @@ class TestEventPostgresRepository:
         first_page, cursor1 = await event_repository.get_participants_by_num(
             event_id=event.id, offset=0, limit=5
         )
-        second_page, cursor2 = await event_repository.get_participants_by_num(
+        second_page, cursor2 = await event_repository.get_participants_by_id(
             event_id=event.id, participant_id=cursor1, limit=5
         )
         third_page, _ = await event_repository.get_participants_by_id(
