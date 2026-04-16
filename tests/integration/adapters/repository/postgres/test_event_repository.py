@@ -176,12 +176,14 @@ class TestEventPostgresRepository:
         for event in events:
             await event_repository.create_event(event)
 
-        first_page, _ = await event_repository.get_events_page_by_num(offset=0, limit=5)
-        second_page, _ = await event_repository.get_events_page_by_id(
-            event_id=first_page[-1].id, limit=5
+        first_page, cursor1 = await event_repository.get_events_page_by_num(
+            offset=0, limit=5
+        )
+        second_page, cursor2 = await event_repository.get_events_page_by_id(
+            event_id=cursor1, limit=5
         )
         third_page, _ = await event_repository.get_events_page_by_id(
-            event_id=second_page[-1].id, limit=5
+            event_id=cursor2, limit=5
         )
 
         assert len(first_page) == 5
@@ -270,11 +272,11 @@ class TestEventPostgresRepository:
         for participant in participants:
             await event_repository.add_participant(event.id, participant)
 
-        first_page, _ = await event_repository.get_participants_by_num(
+        first_page, cursor1 = await event_repository.get_participants_by_num(
             event_id=event.id, offset=0, limit=2
         )
         page_by_id, _ = await event_repository.get_participants_by_id(
-            event_id=event.id, participant_id=first_page[-1].id, limit=2
+            event_id=event.id, participant_id=cursor1, limit=2
         )
 
         assert len(page_by_id) == 2
@@ -294,14 +296,14 @@ class TestEventPostgresRepository:
         for participant in participants:
             await event_repository.add_participant(event.id, participant)
 
-        first_page, _ = await event_repository.get_participants_by_num(
+        first_page, cursor1 = await event_repository.get_participants_by_num(
             event_id=event.id, offset=0, limit=5
         )
-        second_page, _ = await event_repository.get_participants_by_id(
-            event_id=event.id, participant_id=first_page[-1].id, limit=5
+        second_page, cursor2 = await event_repository.get_participants_by_num(
+            event_id=event.id, participant_id=cursor1, limit=5
         )
         third_page, _ = await event_repository.get_participants_by_id(
-            event_id=event.id, participant_id=second_page[-1].id, limit=5
+            event_id=event.id, participant_id=cursor2, limit=5
         )
 
         assert len(first_page) == 5
