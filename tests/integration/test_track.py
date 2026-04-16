@@ -4,9 +4,42 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 
 import pytest
+import pytest_asyncio
+from src.models.event import Event, EventTypeEnum, EventStatusEnum
+from src.adapters.repository.event.postgres.repository import EventPostgresRepository
 from aiokafka import AIOKafkaConsumer
 
 from src.adapters.clients.topics import TRACK_CREATED, TRACK_DELETED, TRACK_UPDATED
+
+
+@pytest_asyncio.fixture
+async def event_id(pool):
+    event = Event(
+        id=uuid.uuid4(),
+        name="Test Event",
+        description="Test Description",
+        type=EventTypeEnum.HACKATHON,
+        registration_start=datetime(2025, 1, 1, tzinfo=timezone.utc),
+        registration_end=datetime(2025, 1, 10, tzinfo=timezone.utc),
+        holding_start=datetime(2025, 1, 15, tzinfo=timezone.utc),
+        holding_end=datetime(2025, 1, 17, tzinfo=timezone.utc),
+        created_at=datetime.now(timezone.utc),
+        organizers=["Organizer 1"],
+        rules="Some rules",
+        faq="Some faq",
+        status=EventStatusEnum.DRAFT,
+    )
+    await EventPostgresRepository(pool).create_event(event)
+    return event.id
+
+
+@pytest_asyncio.fixture
+async def cleanup(pool):
+    yield
+    async with pool.connection() as conn:
+        await conn.execute("DELETE FROM roles")
+        await conn.execute("DELETE FROM tracks")
+        await conn.execute("DELETE FROM events")
 
 
 def _track_payload(event_id: uuid.UUID) -> dict:
@@ -93,6 +126,7 @@ def _assert_kafka_track(message: dict, payload: dict, track_id: str) -> None:
 
 
 @pytest.mark.integration
+@pytest.mark.usefixtures("cleanup")
 class TestTrackFullFlow:
     @pytest.mark.asyncio
     async def test_create_track(self, http_client, kafka_container, event_id):

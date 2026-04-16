@@ -1,5 +1,3 @@
-import uuid
-
 import psycopg_pool
 import pytest
 import pytest_asyncio
@@ -12,6 +10,7 @@ from testcontainers.postgres import PostgresContainer
 from migrations.migrate import up
 from src.adapters.clients.kafka_producer import KafkaProducerClient, dto_serializer
 from src.adapters.repository.track.postgres.repository import TrackPostgresRepository
+from src.adapters.repository.event.postgres.repository import EventPostgresRepository
 from src.controller.http.track.router import create_track_router
 from src.service.track.service import TrackService
 
@@ -67,6 +66,11 @@ async def track_service(track_repository, kafka_producer_client):
     return TrackService(track_repository, kafka_producer_client)
 
 
+@pytest_asyncio.fixture()
+async def event_repository(pool):
+    return EventPostgresRepository(pool)
+
+
 @pytest_asyncio.fixture
 async def http_client(track_service):
     app = FastAPI()
@@ -75,11 +79,3 @@ async def http_client(track_service):
         transport=ASGITransport(app=app), base_url="http://test"
     ) as client:
         yield client
-
-
-@pytest_asyncio.fixture
-async def event_id(pool):
-    eid = uuid.uuid4()
-    async with pool.connection() as conn:
-        await conn.execute("INSERT INTO events (id) VALUES (%s)", (str(eid),))
-    return eid

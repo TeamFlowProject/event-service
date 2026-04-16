@@ -4,16 +4,31 @@ from datetime import datetime, timezone
 import pytest
 import pytest_asyncio
 
-from src.adapters.repository.errors import EventNotFoundError, TrackNotFoundError
+from src.adapters.repository.errors import TrackNotFoundError, EventNotFoundError
+from src.adapters.repository.event.postgres.repository import EventPostgresRepository
+from src.models.event import Event, EventTypeEnum, EventStatusEnum
 from src.models.track import Role, Track, TrackStatusEnum
 
 
 @pytest_asyncio.fixture
 async def event_id(pool):
-    eid = uuid.uuid4()
-    async with pool.connection() as conn:
-        await conn.execute("INSERT INTO events (id) VALUES (%s)", (str(eid),))
-    return eid
+    event = Event(
+        id=uuid.uuid4(),
+        name="Test Event",
+        description="Test Description",
+        type=EventTypeEnum.HACKATHON,
+        registration_start=datetime(2025, 1, 1, tzinfo=timezone.utc),
+        registration_end=datetime(2025, 1, 10, tzinfo=timezone.utc),
+        holding_start=datetime(2025, 1, 15, tzinfo=timezone.utc),
+        holding_end=datetime(2025, 1, 17, tzinfo=timezone.utc),
+        created_at=datetime.now(timezone.utc),
+        organizers=["Organizer 1"],
+        rules="Some rules",
+        faq="Some faq",
+        status=EventStatusEnum.DRAFT,
+    )
+    await EventPostgresRepository(pool).create_event(event)
+    return event.id
 
 
 @pytest_asyncio.fixture
