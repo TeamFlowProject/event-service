@@ -22,7 +22,9 @@ class TeamService:
 
     async def create_team(self, team: Team) -> uuid.UUID:
         try:
-            owner = await self._team_repository.get_member_by_id(team.owner.id, team.event_id)
+            owner = await self._team_repository.get_member_by_id(
+                team.owner.id, team.event_id
+            )
             if owner.have_team:
                 raise service_errors.ParticipantAlreadyInTeam(
                     "Participant already in team"
@@ -62,7 +64,9 @@ class TeamService:
     async def leave_team(self, team_id: uuid.UUID, member_id: uuid.UUID) -> None:
         try:
             team = await self._team_repository.get_team(team_id)
-            member = await self._team_repository.get_member_by_id(member_id, team.event_id)
+            member = await self._team_repository.get_member_by_id(
+                member_id, team.event_id
+            )
             if member not in team.members:
                 raise service_errors.ParticipantNotFoundError(
                     f"User {member.id} is not a member"
@@ -85,7 +89,9 @@ class TeamService:
     async def kick_member(self, team_id: uuid.UUID, member_id: uuid.UUID) -> None:
         try:
             team = await self._team_repository.get_team(team_id)
-            member = await self._team_repository.get_member_by_id(member_id, team.event_id)
+            member = await self._team_repository.get_member_by_id(
+                member_id, team.event_id
+            )
 
             if member not in team.members:
                 raise service_errors.ParticipantNotFoundError(

@@ -163,11 +163,8 @@ async def _set_have_team(
 @pytest.mark.integration
 @pytest.mark.usefixtures("cleanup")
 class TestTeamPostgresRepository:
-
     @pytest.mark.asyncio
-    async def test_create_and_get_team(
-        self, team_repository, event_id, track, owner
-    ):
+    async def test_create_and_get_team(self, team_repository, event_id, track, owner):
         team = _make_team(event_id, track, owner)
         await team_repository.create_team(team)
 
@@ -289,9 +286,7 @@ class TestTeamPostgresRepository:
             await team_repository.get_member_by_id(uuid.uuid4(), event_id)
 
     @pytest.mark.asyncio
-    async def test_get_member_by_id_wrong_event(
-        self, team_repository, owner
-    ):
+    async def test_get_member_by_id_wrong_event(self, team_repository, owner):
         with pytest.raises(ParticipantNotFoundError):
             await team_repository.get_member_by_id(owner.id, uuid.uuid4())
 
@@ -344,9 +339,7 @@ class TestTeamPostgresRepository:
             await team_repository.remove_member(team.id, member.id)
 
     @pytest.mark.asyncio
-    async def test_remove_member_team_not_found_raises(
-        self, team_repository, member
-    ):
+    async def test_remove_member_team_not_found_raises(self, team_repository, member):
         with pytest.raises(TeamNotFoundError):
             await team_repository.remove_member(uuid.uuid4(), member.id)
 
@@ -452,9 +445,7 @@ class TestTeamPostgresRepository:
             await team_repository.update_team(team)
 
     @pytest.mark.asyncio
-    async def test_change_team_status(
-        self, team_repository, event_id, track, owner
-    ):
+    async def test_change_team_status(self, team_repository, event_id, track, owner):
         team = _make_team(event_id, track, owner)
         await team_repository.create_team(team)
 
@@ -466,9 +457,7 @@ class TestTeamPostgresRepository:
     @pytest.mark.asyncio
     async def test_change_team_status_not_found_raises(self, team_repository):
         with pytest.raises(TeamNotFoundError):
-            await team_repository.change_team_status(
-                uuid.uuid4(), TeamStatusEnum.FULL
-            )
+            await team_repository.change_team_status(uuid.uuid4(), TeamStatusEnum.FULL)
 
     @pytest.mark.asyncio
     async def test_get_team_includes_members(
