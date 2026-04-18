@@ -2,6 +2,7 @@ import uuid
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
+from typing import Optional
 
 
 class EventStatusEnum(str, Enum):
@@ -44,3 +45,4 @@ class Participant:
     surname: str
     patronymic: str
     have_team: bool
+    role_id: Optional[uuid.UUID] = None
