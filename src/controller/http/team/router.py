@@ -1,6 +1,5 @@
-# src/controller/http/team/router.py
-import uuid
 from datetime import datetime
+from uuid import UUID
 from uuid_extensions import uuid7
 from fastapi import APIRouter, HTTPException, Query, status
 
@@ -24,7 +23,7 @@ def create_team_router(team_service: TeamService) -> APIRouter:
     router = APIRouter(prefix="/api/v1", tags=["team"])
 
     @router.post("/team/submission", response_model=TeamSubmitResponse)
-    async def post_team_submission(team_id: uuid.UUID = Query(...)):
+    async def post_team_submission(team_id: UUID = Query(...)):
         try:
             await team_service.team_submit(team_id)
             return TeamSubmitResponse(team_id=team_id)
@@ -32,7 +31,7 @@ def create_team_router(team_service: TeamService) -> APIRouter:
             raise HTTPException(404, "Team not found")
 
     @router.get("/teams/{id}", response_model=GetTeamResponse)
-    async def get_teams_by_id(id: uuid.UUID):
+    async def get_teams_by_id(id: UUID):
         try:
             team = await team_service.get_teams(id)
             return GetTeamResponse(
@@ -52,25 +51,25 @@ def create_team_router(team_service: TeamService) -> APIRouter:
             raise HTTPException(404, "Team not found")
 
     @router.get("/event/{event_id}/teams", response_model=GetTeamsResponse)
-    async def get_event_teams(event_id: uuid.UUID): ...
+    async def get_event_teams(event_id: UUID): ...
 
     @router.get("/user/{user_id}/teams", response_model=GetTeamsResponse)
-    async def get_user_teams(user_id: uuid.UUID): ...
+    async def get_user_teams(user_id: UUID): ...
 
     @router.get(
         "/user/{user_id}/event/{event_id}/team", response_model=GetTeamResponse | None
     )
-    async def get_user_event_team(user_id: uuid.UUID, event_id: uuid.UUID): ...
+    async def get_user_event_team(user_id: UUID, event_id: UUID): ...
 
     @router.delete("/team", status_code=status.HTTP_204_NO_CONTENT)
-    async def delete_team_by_query(team_id: uuid.UUID = Query(...)):
+    async def delete_team_by_query(team_id: UUID = Query(...)):
         try:
             await team_service.delete_team(team_id)
         except TeamNotFoundError:
             raise HTTPException(404, "Team not found")
 
     @router.delete("/teams/{id}", status_code=status.HTTP_204_NO_CONTENT)
-    async def delete_teams_by_id(id: uuid.UUID):
+    async def delete_teams_by_id(id: UUID):
         try:
             await team_service.delete_team(id)
         except TeamNotFoundError:
@@ -79,7 +78,7 @@ def create_team_router(team_service: TeamService) -> APIRouter:
     @router.post("/teams", response_model=dict, status_code=status.HTTP_201_CREATED)
     async def post_teams(request: CreateTeamRequest):
         try:
-            team_id = uuid7()
+            team_id: UUID = uuid7()
             # Создаем Participant для owner
             owner = Participant(
                 id=request.owner_id,
@@ -107,7 +106,7 @@ def create_team_router(team_service: TeamService) -> APIRouter:
             raise HTTPException(404, "Team not found")
 
     @router.put("/teams/{team_id}", status_code=status.HTTP_204_NO_CONTENT)
-    async def put_teams(team_id: uuid.UUID, request: UpdateTeamRequest):
+    async def put_teams(team_id: UUID, request: UpdateTeamRequest):
         try:
             existing = await team_service.get_teams(team_id)
 
@@ -129,7 +128,7 @@ def create_team_router(team_service: TeamService) -> APIRouter:
             raise HTTPException(404, "Team not found")
 
     @router.delete("/team/member/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
-    async def delete_team_member(user_id: uuid.UUID, team_id: uuid.UUID = Query(...)):
+    async def delete_team_member(user_id: UUID, team_id: UUID = Query(...)):
         try:
             await team_service.kick_member(team_id, user_id)
         except TeamNotFoundError:
