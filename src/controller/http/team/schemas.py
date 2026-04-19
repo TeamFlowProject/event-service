@@ -1,4 +1,3 @@
-# src/controller/http/team/schemas.py
 import uuid
 from datetime import datetime
 from typing import Optional
@@ -17,8 +16,6 @@ class CreateTeamRequest(BaseModel):
 
 
 class UpdateTeamRequest(BaseModel):
-    """PUT /teams - обновление команды"""
-
     name: Optional[str] = Field(None, min_length=1, max_length=100)
     description: Optional[str] = Field(None, max_length=500)
     track_id: Optional[uuid.UUID] = None

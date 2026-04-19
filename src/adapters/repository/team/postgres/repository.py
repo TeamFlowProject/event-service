@@ -265,3 +265,22 @@ class TeamPostgresRepository:
             await cursor.execute(GET_ROLES_BY_TRACK_QUERY, {"track_id": str(track_id)})
             rows = await cursor.fetchall()
             return [row.to_model() for row in rows]
+
+    async def get_all_teams(self) -> list[Team]:
+        async with self._pool.connection() as conn:
+            async with conn.cursor(
+                row_factory=psycopg.rows.class_row(TeamRow)
+            ) as cursor:
+                await cursor.execute("SELECT * FROM teams")
+                rows = await cursor.fetchall()
+
+                teams = []
+                for row in rows:
+                    owner = await self._get_participant(
+                        conn, row.owner_id, row.event_id
+                    )
+                    members = await self._get_team_members(conn, row.id, row.event_id)
+                    required_roles = await self._get_team_roles(conn, row.id)
+                    teams.append(row.to_model(owner, members, required_roles))
+
+                return teams

@@ -14,7 +14,7 @@ class TeamStatusEnum(str, Enum):
     FULL = "FULL"
     SUBMITTED = "SUBMITTED"
     VALIDATED = "VALIDATED"
-    CONFIRMED = "CINFIRMED"
+    CONFIRMED = "CONFIRMED"
     REJECTED = "REJECTED"
     INVALID = "INVALID"
 

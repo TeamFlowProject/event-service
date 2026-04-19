@@ -14,7 +14,7 @@ class TeamService:
         self._team_repository = team_repository
         self._kafka_producer = kafka_producer
 
-    async def get_teams(self, team_id: uuid.UUID) -> Team:
+    async def get_team(self, team_id: uuid.UUID) -> Team:
         try:
             return await self._team_repository.get_team(team_id)
         except adapter_errors.TeamNotFoundError as e:
@@ -136,3 +136,50 @@ class TeamService:
             await self._team_repository.change_team_status(team_id, status)
         except adapter_errors.TeamNotFoundError as e:
             raise service_errors.TeamNotFoundError("Failed to change status") from e
+
+    async def get_teams_by_event_id(self, event_id: uuid.UUID) -> list[Team]:
+        try:
+            all_teams = await self._team_repository.get_all_teams()
+            teams = [team for team in all_teams if team.event_id == event_id]
+
+            if not teams:
+                raise service_errors.EventNotFoundError(
+                    f"No teams found for event {event_id}"
+                )
+
+            return teams
+        except adapter_errors.EventNotFoundError:
+            raise service_errors.EventNotFoundError(f"Event {event_id} not found")
+
+    async def get_teams_by_user(self, user_id: uuid.UUID) -> list[Team]:
+        try:
+            all_teams = await self._team_repository.get_all_teams()
+            result = []
+            for team in all_teams:
+                if team.owner.id == user_id:
+                    result.append(team)
+                elif any(member.id == user_id for member in team.members):
+                    result.append(team)
+            return result
+        except adapter_errors.ParticipantNotFoundError:
+            raise service_errors.EventNotFoundError(f"Event {user_id} not found")
+
+    async def get_user_team_in_event(
+        self, user_id: uuid.UUID, event_id: uuid.UUID
+    ) -> Team | None:
+        try:
+            all_teams = await self._team_repository.get_all_teams()
+            event_teams = [team for team in all_teams if team.event_id == event_id]
+            if not event_teams:
+                raise service_errors.EventNotFoundError(f"Event {event_id} not found")
+
+            for team in event_teams:
+                if team.owner.id == user_id:
+                    return team
+                if any(member.id == user_id for member in team.members):
+                    return team
+            return None
+        except adapter_errors.EventNotFoundError:
+            raise service_errors.EventNotFoundError(f"Event {event_id} not found")
+        except adapter_errors.ParticipantNotFoundError:
+            raise service_errors.EventNotFoundError(f"Event {user_id} not found")
