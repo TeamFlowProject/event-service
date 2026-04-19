@@ -6,4 +6,3 @@ CREATE TABLE IF NOT EXISTS participants (
     surname VARCHAR(255) NOT NULL,
     patronymic VARCHAR(255) NOT NULL
 );
-

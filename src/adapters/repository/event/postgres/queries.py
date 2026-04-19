@@ -13,8 +13,8 @@ CREATE_EVENT_QUERY = """
         rules,
         faq,
         status
-    ) 
-    VALUES 
+    )
+    VALUES
     (
         %(id)s,
         %(name)s,
