@@ -142,7 +142,7 @@ def create_team_router(team_service: TeamService) -> APIRouter:
     @router.post("/teams", response_model=dict, status_code=status.HTTP_201_CREATED)
     async def post_teams(request: CreateTeamRequest):
         try:
-            team_id = uuid7()
+            team_id = uuid.UUID(uuid7())
             owner = Participant(
                 id=request.owner_id,
                 event_id=request.event_id,
