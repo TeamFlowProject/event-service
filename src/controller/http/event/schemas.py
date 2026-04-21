@@ -1,20 +1,8 @@
 from datetime import datetime
-from enum import Enum
 import uuid
 
 from pydantic import BaseModel, Field, field_validator
-
-
-class EventStatusEnum(str, Enum):
-    DRAFT = "DRAFT"
-    OPEN = "OPEN"
-    FULL = "FULL"
-    CLOSED = "CLOSED"
-
-
-class EventTypeEnum(str, Enum):
-    HACKATHON = "HACKATHON"
-    PRACTICE = "PRACTICE"
+from src.models.event import EventStatusEnum, EventTypeEnum
 
 
 class _EventRequestBase(BaseModel):

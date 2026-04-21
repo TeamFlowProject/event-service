@@ -1,7 +1,5 @@
 import uuid
-from typing import cast
 
-from uuid_extensions import uuid7
 from fastapi import APIRouter, HTTPException
 
 from src.controller.http.track.schemas import (
@@ -22,7 +20,7 @@ def create_track_router(track_service: TrackService) -> APIRouter:
     @router.post("/track", response_model=dict, status_code=201)
     async def create_track(request: CreateTrackRequest):
         try:
-            track_id = cast(uuid.UUID, uuid7())
+            track_id = uuid.uuid4()
             track = _request_to_model(request, track_id)
             created_id = await track_service.create_track(track)
             return {"id": str(created_id)}
@@ -69,7 +67,7 @@ def _request_to_model(
 ) -> TrackModel:
     roles = [
         RoleModel(
-            id=getattr(role, "id", None) or cast(uuid.UUID, uuid7()),
+            id=getattr(role, "id", None) or uuid.uuid4(),
             track_id=track_id,
             name=role.name,
             description=role.description,

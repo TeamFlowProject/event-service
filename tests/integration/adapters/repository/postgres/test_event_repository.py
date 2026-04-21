@@ -2,8 +2,6 @@ import uuid
 from datetime import datetime, timezone
 
 import pytest
-from typing import cast
-from uuid_extensions import uuid7
 
 import pytest_asyncio
 
@@ -24,7 +22,7 @@ async def cleanup(pool):
 
 def _make_event() -> Event:
     return Event(
-        id=cast(uuid.UUID, uuid7()),
+        id=uuid.uuid4(),
         name="Test Event",
         description="Test Description",
         type=EventTypeEnum.HACKATHON,
@@ -41,7 +39,7 @@ def _make_event() -> Event:
 
 
 def _make_participant(event_id: uuid.UUID) -> Participant:
-    participant_id = cast(uuid.UUID, uuid7())
+    participant_id = uuid.uuid4()
     return Participant(
         id=participant_id,
         event_id=event_id,
@@ -79,7 +77,7 @@ class TestEventPostgresRepository:
     @pytest.mark.asyncio
     async def test_get_event_not_found(self, event_repository):
         with pytest.raises(EventNotFoundError):
-            await event_repository.get_event_by_id(cast(uuid.UUID, uuid7()))
+            await event_repository.get_event_by_id(uuid.uuid4())
 
     @pytest.mark.asyncio
     async def test_update_event(self, event_repository):
@@ -118,7 +116,7 @@ class TestEventPostgresRepository:
     @pytest.mark.asyncio
     async def test_delete_event_not_found(self, event_repository):
         with pytest.raises(EventNotFoundError):
-            await event_repository.delete_event(cast(uuid.UUID, uuid7()))
+            await event_repository.delete_event(uuid.uuid4())
 
     @pytest.mark.asyncio
     async def test_get_events_page_by_num(self, event_repository):
@@ -215,7 +213,7 @@ class TestEventPostgresRepository:
     @pytest.mark.asyncio
     async def test_get_events_page_by_id_empty(self, event_repository):
         page, cursor = await event_repository.get_events_page_by_id(
-            event_id=cast(uuid.UUID, uuid7()), limit=10
+            event_id=uuid.uuid4(), limit=10
         )
 
         assert page == []
@@ -332,7 +330,7 @@ class TestEventPostgresRepository:
         await event_repository.create_event(event)
 
         page, cursor = await event_repository.get_participants_by_id(
-            event_id=event.id, participant_id=cast(uuid.UUID, uuid7()), limit=10
+            event_id=event.id, participant_id=uuid.uuid4(), limit=10
         )
 
         assert page == []

@@ -3,7 +3,6 @@ from typing import Optional
 from datetime import datetime
 
 from fastapi import APIRouter, HTTPException
-from uuid_extensions import uuid7
 
 from src.controller.http.event.schemas import (
     CreatedResourceResponse,
@@ -29,7 +28,7 @@ def create_event_router(event_service: EventService) -> APIRouter:
 
     @router.post("/events", response_model=CreatedResourceResponse, status_code=201)
     async def create_event(request: CreateEventRequest):
-        event_id = uuid7()
+        event_id = uuid.uuid4()
         event = EventModel(
             id=event_id,
             name=request.name,
