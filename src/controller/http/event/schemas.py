@@ -2,7 +2,7 @@ from datetime import datetime
 from enum import Enum
 import uuid
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, Field, field_validator
 
 
 class EventStatusEnum(str, Enum):
@@ -45,9 +45,21 @@ class _EventRequestBase(BaseModel):
             raise ValueError("holding_end must be >= holding_start")
         return v
 
+    @field_validator("holding_start")
+    @classmethod
+    def validate_holding_vs_registration(cls, v: datetime, info) -> datetime:
+        registration_end = info.data.get("registration_end")
+        if registration_end is not None and v < registration_end:
+            raise ValueError("holding_start must be >= registration_end")
+        return v
+
 
 class CreateEventRequest(_EventRequestBase):
     pass
+
+
+class CreatedResourceResponse(BaseModel):
+    id: uuid.UUID
 
 
 class UpdateEventRequest(BaseModel):
@@ -64,14 +76,7 @@ class UpdateEventRequest(BaseModel):
     status: EventStatusEnum | None = None
 
 
-class EventsPageResponse(BaseModel):
-    items: list[Event]
-    next_cursor: uuid.UUID | int | None = None
-
-
 class Event(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
     id: uuid.UUID
     name: str
     description: str
@@ -89,9 +94,16 @@ class Event(BaseModel):
     status: EventStatusEnum
 
 
-class Participant(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
+class EventsPageResponse(BaseModel):
+    items: list[Event]
+    next_cursor: uuid.UUID | int | None = None
 
+
+class EventResponse(Event):
+    pass
+
+
+class Participant(BaseModel):
     id: uuid.UUID
     event_id: uuid.UUID
 
@@ -99,7 +111,6 @@ class Participant(BaseModel):
     surname: str
     patronymic: str
     have_team: bool
-
 
 
 class CreateParticipantRequest(BaseModel):
@@ -114,6 +125,6 @@ class ParticipantsPageResponse(BaseModel):
     next_cursor: uuid.UUID | None = None
 
 
-class CreatedResourceResponse(BaseModel):
-    id: uuid.UUID
+
+
 
