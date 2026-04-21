@@ -123,8 +123,3 @@ class CreateParticipantRequest(BaseModel):
 class ParticipantsPageResponse(BaseModel):
     items: list[Participant]
     next_cursor: uuid.UUID | None = None
-
-
-
-
-

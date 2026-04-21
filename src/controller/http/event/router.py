@@ -17,13 +17,17 @@ from src.controller.http.event.schemas import (
 )
 from src.service.event.service import EventService
 from src.models.event import Event as EventModel, EventStatusEnum
-from src.service.errors import EventNotFoundError, PaginationError, ParticipantNotFoundError
+from src.service.errors import (
+    EventNotFoundError,
+    PaginationError,
+    ParticipantNotFoundError,
+)
 
 
 def create_event_router(event_service: EventService) -> APIRouter:
     router = APIRouter(prefix="/api/v1", tags=["event"])
 
-    @router.post("/events", response_model=CreatedResourceResponse,  status_code=201)
+    @router.post("/events", response_model=CreatedResourceResponse, status_code=201)
     async def create_event(request: CreateEventRequest):
         event_id = uuid7()
         event = EventModel(
@@ -75,7 +79,8 @@ def create_event_router(event_service: EventService) -> APIRouter:
                 name=request.name or event.name,
                 type=request.type or event.type,
                 description=request.description or event.description,
-                registration_start=request.registration_start or event.registration_start,
+                registration_start=request.registration_start
+                or event.registration_start,
                 registration_end=request.registration_end or event.registration_end,
                 holding_start=request.holding_start or event.holding_start,
                 holding_end=request.holding_end or event.holding_end,
@@ -112,17 +117,20 @@ def create_event_router(event_service: EventService) -> APIRouter:
             raise HTTPException(status_code=404, detail="Event not found")
 
     @router.get("/events", response_model=EventsPageResponse)
-    async def get_events(event_id: Optional[uuid.UUID] = None, offset: Optional[int] = None, limit: int = 10):
+    async def get_events(
+        event_id: Optional[uuid.UUID] = None,
+        offset: Optional[int] = None,
+        limit: int = 10,
+    ):
         try:
             events, next_cursor = await event_service.get_events_page(
-                event_id=event_id,
-                offset=offset,
-                limit=limit
+                event_id=event_id, offset=offset, limit=limit
             )
         except PaginationError as exc:
             raise HTTPException(status_code=400, detail=str(exc))
 
-        items = [Event(
+        items = [
+            Event(
                 id=e.id,
                 name=e.name,
                 description=e.description,
@@ -136,16 +144,15 @@ def create_event_router(event_service: EventService) -> APIRouter:
                 rules=e.rules,
                 faq=e.faq,
                 status=e.status,
-                )
-                for e in events]
+            )
+            for e in events
+        ]
 
-        return EventsPageResponse(
-            items=items,
-            next_cursor=next_cursor
-        )
+        return EventsPageResponse(items=items, next_cursor=next_cursor)
 
-
-    @router.get("/events/{event_id}/participants", response_model=ParticipantsPageResponse)
+    @router.get(
+        "/events/{event_id}/participants", response_model=ParticipantsPageResponse
+    )
     async def get_participants(
         event_id: uuid.UUID,
         participant_id: Optional[uuid.UUID] = None,

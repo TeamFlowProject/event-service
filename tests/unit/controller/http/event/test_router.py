@@ -13,7 +13,11 @@ from src.models.event import (
     EventTypeEnum,
     Participant as ParticipantModel,
 )
-from src.service.errors import EventNotFoundError, PaginationError, ParticipantNotFoundError
+from src.service.errors import (
+    EventNotFoundError,
+    PaginationError,
+    ParticipantNotFoundError,
+)
 
 
 def make_event(**kwargs) -> EventModel:
