@@ -7,6 +7,7 @@ from fastapi import APIRouter, HTTPException
 from src.controller.http.event.schemas import (
     CreatedResourceResponse,
     CreateEventRequest,
+    CreateParticipantRequest,
     EventResponse,
     EventsPageResponse,
     Participant,
@@ -16,9 +17,11 @@ from src.controller.http.event.schemas import (
 )
 from src.service.event.service import EventService
 from src.models.event import Event as EventModel, EventStatusEnum
+from src.models.event import Participant as ParticipantModel
 from src.service.errors import (
     EventNotFoundError,
     PaginationError,
+    ParticipantError,
     ParticipantNotFoundError,
 )
 
@@ -28,7 +31,7 @@ def create_event_router(event_service: EventService) -> APIRouter:
 
     @router.post("/events", response_model=CreatedResourceResponse, status_code=201)
     async def create_event(request: CreateEventRequest):
-        event_id = uuid.uuid4()
+        event_id = uuid.uuid7()
         event = EventModel(
             id=event_id,
             name=request.name,
@@ -148,6 +151,30 @@ def create_event_router(event_service: EventService) -> APIRouter:
         ]
 
         return EventsPageResponse(items=items, next_cursor=next_cursor)
+
+    @router.post(
+        "/events/{event_id}/participants",
+        response_model=CreatedResourceResponse,
+        status_code=201,
+    )
+    async def create_participant(event_id: uuid.UUID, request: CreateParticipantRequest):
+        participant_id = uuid.uuid7()
+        participant = ParticipantModel(
+            id=participant_id,
+            event_id=event_id,
+            name=request.name,
+            surname=request.surname,
+            patronymic=request.patronymic,
+            have_team=request.have_team,
+        )
+        try:
+            await event_service.add_participant(event_id, participant)
+        except EventNotFoundError:
+            raise HTTPException(status_code=404, detail="Event not found")
+        except ParticipantError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+
+        return CreatedResourceResponse(id=participant_id)
 
     @router.get(
         "/events/{event_id}/participants", response_model=ParticipantsPageResponse

@@ -12,8 +12,8 @@ from src.service.track.service import TrackService
 
 def make_track(**kwargs) -> Track:
     defaults = dict(
-        id=uuid.uuid4(),
-        event_id=uuid.uuid4(),
+        id=uuid.uuid7(),
+        event_id=uuid.uuid7(),
         name="Test Track",
         description="A test track",
         max_team_count=10,
@@ -119,7 +119,7 @@ class TestDeleteTrack:
         repo.get_track.side_effect = adapter_errors.TrackNotFoundError
 
         with pytest.raises(service_errors.TrackNotFoundError):
-            await service.delete_track(uuid.uuid4())
+            await service.delete_track(uuid.uuid7())
 
         kafka.send_delete_track.assert_not_called()
 
@@ -141,14 +141,14 @@ class TestGetTrack:
         repo.get_track.side_effect = adapter_errors.TrackNotFoundError
 
         with pytest.raises(service_errors.TrackNotFoundError):
-            await service.get_track(uuid.uuid4())
+            await service.get_track(uuid.uuid7())
 
 
 @pytest.mark.unit
 class TestGetTracksByEventId:
     @pytest.mark.asyncio
     async def test_returns_tracks(self, service, repo):
-        event_id = uuid.uuid4()
+        event_id = uuid.uuid7()
         tracks = [make_track(event_id=event_id), make_track(event_id=event_id)]
         repo.get_tracks_by_event_id.return_value = tracks
 
@@ -161,6 +161,6 @@ class TestGetTracksByEventId:
     async def test_returns_empty_list_for_unknown_event(self, service, repo):
         repo.get_tracks_by_event_id.return_value = []
 
-        result = await service.get_tracks_by_event_id(uuid.uuid4())
+        result = await service.get_tracks_by_event_id(uuid.uuid7())
 
         assert result == []

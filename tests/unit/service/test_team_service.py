@@ -13,8 +13,8 @@ from src.service.team.service import TeamService
 
 def make_participant(**kwargs) -> Participant:
     defaults = dict(
-        id=uuid.uuid4(),
-        event_id=uuid.uuid4(),
+        id=uuid.uuid7(),
+        event_id=uuid.uuid7(),
         name="John",
         surname="Doe",
         patronymic="Smith",
@@ -27,9 +27,9 @@ def make_participant(**kwargs) -> Participant:
 def make_team(**kwargs) -> Team:
     owner = make_participant()
     defaults = dict(
-        id=uuid.uuid4(),
-        track_id=uuid.uuid4(),
-        event_id=uuid.uuid4(),
+        id=uuid.uuid7(),
+        track_id=uuid.uuid7(),
+        event_id=uuid.uuid7(),
         owner=owner,
         members=[owner],
         required_roles=[],
@@ -75,7 +75,7 @@ class TestGetTeam:
         repo.get_team.side_effect = adapter_errors.TeamNotFoundError
 
         with pytest.raises(service_errors.TeamNotFoundError):
-            await service.get_teams(uuid.uuid4())
+            await service.get_teams(uuid.uuid7())
 
 
 @pytest.mark.unit
@@ -218,7 +218,7 @@ class TestUpdateTeam:
 class TestDeleteTeam:
     @pytest.mark.asyncio
     async def test_calls_repo_and_kafka(self, service, repo, kafka):
-        team_id = uuid.uuid4()
+        team_id = uuid.uuid7()
         team = make_team(id=team_id)
         repo.get_team.return_value = team
         repo.delete_team.return_value = None
@@ -234,7 +234,7 @@ class TestDeleteTeam:
         repo.get_team.side_effect = adapter_errors.TeamNotFoundError
 
         with pytest.raises(service_errors.TeamNotFoundError):
-            await service.delete_team(uuid.uuid4())
+            await service.delete_team(uuid.uuid7())
 
         repo.delete_team.assert_not_called()
         kafka.send_team_deleted.assert_not_called()
@@ -244,9 +244,9 @@ class TestDeleteTeam:
 class TestLeaveTeam:
     @pytest.mark.asyncio
     async def test_calls_repo_and_kafka(self, service, repo, kafka):
-        team_id = uuid.uuid4()
-        member_id = uuid.uuid4()
-        owner = make_participant(id=uuid.uuid4())
+        team_id = uuid.uuid7()
+        member_id = uuid.uuid7()
+        owner = make_participant(id=uuid.uuid7())
         member = make_participant(id=member_id)
         team = make_team(id=team_id, owner=owner, members=[owner, member])
 
@@ -266,8 +266,8 @@ class TestLeaveTeam:
         self, service, repo, kafka
     ):
         """Тест: участник не найден в БД при попытке выйти из команды"""
-        team_id = uuid.uuid4()
-        member_id = uuid.uuid4()
+        team_id = uuid.uuid7()
+        member_id = uuid.uuid7()
         team = make_team(id=team_id)
 
         repo.get_team.return_value = team
@@ -284,8 +284,8 @@ class TestLeaveTeam:
 
     @pytest.mark.asyncio
     async def test_raises_error_when_member_not_in_team(self, service, repo, kafka):
-        team_id = uuid.uuid4()
-        member_id = uuid.uuid4()
+        team_id = uuid.uuid7()
+        member_id = uuid.uuid7()
         owner = make_participant()
         member = make_participant(id=member_id)
         team = make_team(id=team_id, owner=owner, members=[owner])
@@ -301,8 +301,8 @@ class TestLeaveTeam:
 
     @pytest.mark.asyncio
     async def test_raises_error_when_owner_tries_to_leave(self, service, repo, kafka):
-        team_id = uuid.uuid4()
-        owner_id = uuid.uuid4()
+        team_id = uuid.uuid7()
+        owner_id = uuid.uuid7()
         owner = make_participant(id=owner_id)
         team = make_team(id=team_id, owner=owner, members=[owner])
 
@@ -320,16 +320,16 @@ class TestLeaveTeam:
         repo.get_team.side_effect = adapter_errors.TeamNotFoundError
 
         with pytest.raises(service_errors.TeamNotFoundError):
-            await service.leave_team(uuid.uuid4(), uuid.uuid4())
+            await service.leave_team(uuid.uuid7(), uuid.uuid7())
 
 
 @pytest.mark.unit
 class TestKickMember:
     @pytest.mark.asyncio
     async def test_calls_repo_and_kafka(self, service, repo, kafka):
-        team_id = uuid.uuid4()
-        member_id = uuid.uuid4()
-        owner = make_participant(id=uuid.uuid4())
+        team_id = uuid.uuid7()
+        member_id = uuid.uuid7()
+        owner = make_participant(id=uuid.uuid7())
         member = make_participant(id=member_id)
         team = make_team(id=team_id, owner=owner, members=[owner, member])
 
@@ -346,8 +346,8 @@ class TestKickMember:
 
     @pytest.mark.asyncio
     async def test_raises_error_when_member_not_in_team(self, service, repo, kafka):
-        team_id = uuid.uuid4()
-        member_id = uuid.uuid4()
+        team_id = uuid.uuid7()
+        member_id = uuid.uuid7()
         owner = make_participant()
         member = make_participant(id=member_id)
         team = make_team(id=team_id, owner=owner, members=[owner])
@@ -363,8 +363,8 @@ class TestKickMember:
 
     @pytest.mark.asyncio
     async def test_raises_error_when_trying_to_kick_owner(self, service, repo, kafka):
-        team_id = uuid.uuid4()
-        owner_id = uuid.uuid4()
+        team_id = uuid.uuid7()
+        owner_id = uuid.uuid7()
         owner = make_participant(id=owner_id)
         team = make_team(id=team_id, owner=owner, members=[owner])
 
@@ -382,8 +382,8 @@ class TestKickMember:
         self, service, repo, kafka
     ):
         """Тест: участник не найден в БД при попытке кикнуть из команды"""
-        team_id = uuid.uuid4()
-        member_id = uuid.uuid4()
+        team_id = uuid.uuid7()
+        member_id = uuid.uuid7()
         team = make_team(id=team_id)
 
         repo.get_team.return_value = team
@@ -403,7 +403,7 @@ class TestKickMember:
         repo.get_team.side_effect = adapter_errors.TeamNotFoundError
 
         with pytest.raises(service_errors.TeamNotFoundError):
-            await service.kick_member(uuid.uuid4(), uuid.uuid4())
+            await service.kick_member(uuid.uuid7(), uuid.uuid7())
 
         repo.remove_member.assert_not_called()
         kafka.send_member_kicked.assert_not_called()
@@ -413,7 +413,7 @@ class TestKickMember:
 class TestTeamSubmit:
     @pytest.mark.asyncio
     async def test_calls_repo_and_kafka(self, service, repo, kafka):
-        team_id = uuid.uuid4()
+        team_id = uuid.uuid7()
         team = make_team(id=team_id, status=TeamStatusEnum.FULL)
         repo.get_team.return_value = team
         repo.change_team_status.return_value = None
@@ -428,7 +428,7 @@ class TestTeamSubmit:
 
     @pytest.mark.asyncio
     async def test_raises_error_when_status_is_draft(self, service, repo, kafka):
-        team_id = uuid.uuid4()
+        team_id = uuid.uuid7()
         team = make_team(id=team_id, status=TeamStatusEnum.DRAFT)
         repo.get_team.return_value = team
 
@@ -440,7 +440,7 @@ class TestTeamSubmit:
 
     @pytest.mark.asyncio
     async def test_raises_error_when_status_is_submitted(self, service, repo, kafka):
-        team_id = uuid.uuid4()
+        team_id = uuid.uuid7()
         team = make_team(id=team_id, status=TeamStatusEnum.SUBMITTED)
         repo.get_team.return_value = team
 
@@ -452,7 +452,7 @@ class TestTeamSubmit:
 
     @pytest.mark.asyncio
     async def test_raises_error_when_status_is_confirmed(self, service, repo, kafka):
-        team_id = uuid.uuid4()
+        team_id = uuid.uuid7()
         team = make_team(id=team_id, status=TeamStatusEnum.CONFIRMED)
         repo.get_team.return_value = team
 
@@ -464,7 +464,7 @@ class TestTeamSubmit:
 
     @pytest.mark.asyncio
     async def test_allows_submit_when_status_is_building(self, service, repo, kafka):
-        team_id = uuid.uuid4()
+        team_id = uuid.uuid7()
         team = make_team(id=team_id, status=TeamStatusEnum.BUILDING)
         repo.get_team.return_value = team
         repo.change_team_status.return_value = None
@@ -478,7 +478,7 @@ class TestTeamSubmit:
 
     @pytest.mark.asyncio
     async def test_allows_submit_when_status_is_validated(self, service, repo, kafka):
-        team_id = uuid.uuid4()
+        team_id = uuid.uuid7()
         team = make_team(id=team_id, status=TeamStatusEnum.VALIDATED)
         repo.get_team.return_value = team
         repo.change_team_status.return_value = None
@@ -492,7 +492,7 @@ class TestTeamSubmit:
 
     @pytest.mark.asyncio
     async def test_allows_submit_when_status_is_rejected(self, service, repo, kafka):
-        team_id = uuid.uuid4()
+        team_id = uuid.uuid7()
         team = make_team(id=team_id, status=TeamStatusEnum.REJECTED)
         repo.get_team.return_value = team
         repo.change_team_status.return_value = None
@@ -506,7 +506,7 @@ class TestTeamSubmit:
 
     @pytest.mark.asyncio
     async def test_allows_submit_when_status_is_invalid(self, service, repo, kafka):
-        team_id = uuid.uuid4()
+        team_id = uuid.uuid7()
         team = make_team(id=team_id, status=TeamStatusEnum.INVALID)
         repo.get_team.return_value = team
         repo.change_team_status.return_value = None
@@ -523,7 +523,7 @@ class TestTeamSubmit:
         repo.get_team.side_effect = adapter_errors.TeamNotFoundError
 
         with pytest.raises(service_errors.TeamNotFoundError):
-            await service.team_submit(uuid.uuid4())
+            await service.team_submit(uuid.uuid7())
 
         repo.change_team_status.assert_not_called()
         kafka.send_team_submitted.assert_not_called()
@@ -533,7 +533,7 @@ class TestTeamSubmit:
 class TestChangeTeamStatus:
     @pytest.mark.asyncio
     async def test_calls_repo(self, service, repo):
-        team_id = uuid.uuid4()
+        team_id = uuid.uuid7()
         status = TeamStatusEnum.VALIDATED
         repo.change_team_status.return_value = None
 
@@ -546,4 +546,4 @@ class TestChangeTeamStatus:
         repo.change_team_status.side_effect = adapter_errors.TeamNotFoundError
 
         with pytest.raises(service_errors.TeamNotFoundError):
-            await service.change_team_status(uuid.uuid4(), TeamStatusEnum.VALIDATED)
+            await service.change_team_status(uuid.uuid7(), TeamStatusEnum.VALIDATED)

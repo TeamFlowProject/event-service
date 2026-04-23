@@ -10,10 +10,10 @@ from src.models.track import Role, Track, TrackStatusEnum
 
 
 def _make_track() -> Track:
-    track_id = uuid.uuid4()
+    track_id = uuid.uuid7()
     return Track(
         id=track_id,
-        event_id=uuid.uuid4(),
+        event_id=uuid.uuid7(),
         name="Backend Track",
         description="Backend development track",
         max_team_count=10,
@@ -22,7 +22,7 @@ def _make_track() -> Track:
         max_team_size=5,
         required_roles=[
             Role(
-                id=uuid.uuid4(),
+                id=uuid.uuid7(),
                 track_id=track_id,
                 name="Developer",
                 description="Backend developer",
@@ -40,7 +40,7 @@ async def _consume_one(bootstrap_server: str, topic: str) -> dict:
         topic,
         bootstrap_servers=bootstrap_server,
         auto_offset_reset="earliest",
-        group_id=f"test-group-{uuid.uuid4()}",
+        group_id=f"test-group-{uuid.uuid7()}",
         consumer_timeout_ms=10000,
     )
     await consumer.start()

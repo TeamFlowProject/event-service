@@ -16,13 +16,14 @@ from src.models.event import (
 from src.service.errors import (
     EventNotFoundError,
     PaginationError,
+    ParticipantError,
     ParticipantNotFoundError,
 )
 
 
 def make_event(**kwargs) -> EventModel:
     defaults = dict(
-        id=uuid.uuid4(),
+        id=uuid.uuid7(),
         name="Test Event",
         description="Test event description",
         type=EventTypeEnum.HACKATHON,
@@ -42,8 +43,8 @@ def make_event(**kwargs) -> EventModel:
 
 def make_participant(**kwargs) -> ParticipantModel:
     defaults = dict(
-        id=uuid.uuid4(),
-        event_id=uuid.uuid4(),
+        id=uuid.uuid7(),
+        event_id=uuid.uuid7(),
         name="Ivan",
         surname="Ivanov",
         patronymic="Ivanovich",
@@ -86,7 +87,7 @@ def client(service):
 class TestCreateEvent:
     @pytest.mark.asyncio
     async def test_returns_201_with_id(self, client, service):
-        event_id = uuid.uuid4()
+        event_id = uuid.uuid7()
         service.create_event.return_value = event_id
 
         async with client as c:
@@ -97,7 +98,7 @@ class TestCreateEvent:
 
     @pytest.mark.asyncio
     async def test_calls_service(self, client, service):
-        service.create_event.return_value = uuid.uuid4()
+        service.create_event.return_value = uuid.uuid7()
 
         async with client as c:
             await c.post("/api/v1/events", json=make_create_payload())
@@ -142,7 +143,7 @@ class TestGetEvent:
         service.get_event_by_id.side_effect = EventNotFoundError
 
         async with client as c:
-            resp = await c.get(f"/api/v1/events/{uuid.uuid4()}")
+            resp = await c.get(f"/api/v1/events/{uuid.uuid7()}")
 
         assert resp.status_code == 404
 
@@ -151,7 +152,7 @@ class TestGetEvent:
 class TestUpdateEvent:
     @pytest.mark.asyncio
     async def test_returns_200(self, client, service):
-        event_id = uuid.uuid4()
+        event_id = uuid.uuid7()
         current_event = make_event(id=event_id)
         service.get_event_by_id.return_value = current_event
 
@@ -166,7 +167,7 @@ class TestUpdateEvent:
 
     @pytest.mark.asyncio
     async def test_calls_service(self, client, service):
-        event_id = uuid.uuid4()
+        event_id = uuid.uuid7()
         service.get_event_by_id.return_value = make_event(id=event_id)
 
         async with client as c:
@@ -179,7 +180,7 @@ class TestUpdateEvent:
         service.get_event_by_id.side_effect = EventNotFoundError
 
         async with client as c:
-            resp = await c.put(f"/api/v1/events/{uuid.uuid4()}", json={"name": "x"})
+            resp = await c.put(f"/api/v1/events/{uuid.uuid7()}", json={"name": "x"})
 
         assert resp.status_code == 404
 
@@ -189,13 +190,13 @@ class TestDeleteEvent:
     @pytest.mark.asyncio
     async def test_returns_204(self, client, service):
         async with client as c:
-            resp = await c.delete(f"/api/v1/events/{uuid.uuid4()}")
+            resp = await c.delete(f"/api/v1/events/{uuid.uuid7()}")
 
         assert resp.status_code == 204
 
     @pytest.mark.asyncio
     async def test_calls_service(self, client, service):
-        event_id = uuid.uuid4()
+        event_id = uuid.uuid7()
 
         async with client as c:
             await c.delete(f"/api/v1/events/{event_id}")
@@ -207,7 +208,7 @@ class TestDeleteEvent:
         service.delete_event.side_effect = EventNotFoundError
 
         async with client as c:
-            resp = await c.delete(f"/api/v1/events/{uuid.uuid4()}")
+            resp = await c.delete(f"/api/v1/events/{uuid.uuid7()}")
 
         assert resp.status_code == 404
 
@@ -218,7 +219,7 @@ class TestGetEvents:
     async def test_returns_events_page(self, client, service):
         event_1 = make_event()
         event_2 = make_event()
-        next_cursor = uuid.uuid4()
+        next_cursor = uuid.uuid7()
         service.get_events_page.return_value = ([event_1, event_2], next_cursor)
 
         async with client as c:
@@ -240,12 +241,88 @@ class TestGetEvents:
 
 
 @pytest.mark.unit
+class TestCreateParticipant:
+    @pytest.mark.asyncio
+    async def test_returns_201_with_id(self, client, service):
+        event_id = uuid.uuid7()
+        payload = {
+            "name": "Ivan",
+            "surname": "Ivanov",
+            "patronymic": "Ivanovich",
+            "have_team": False,
+        }
+
+        async with client as c:
+            resp = await c.post(f"/api/v1/events/{event_id}/participants", json=payload)
+
+        assert resp.status_code == 201
+        assert "id" in resp.json()
+
+    @pytest.mark.asyncio
+    async def test_calls_service(self, client, service):
+        event_id = uuid.uuid7()
+        payload = {
+            "name": "Ivan",
+            "surname": "Ivanov",
+            "patronymic": "Ivanovich",
+            "have_team": False,
+        }
+
+        async with client as c:
+            await c.post(f"/api/v1/events/{event_id}/participants", json=payload)
+
+        service.add_participant.assert_called_once()
+        call_event_id, call_participant = service.add_participant.call_args.args
+        assert call_event_id == event_id
+        assert call_participant.event_id == event_id
+        assert call_participant.name == payload["name"]
+        assert call_participant.surname == payload["surname"]
+        assert call_participant.patronymic == payload["patronymic"]
+        assert call_participant.have_team is payload["have_team"]
+
+    @pytest.mark.asyncio
+    async def test_returns_404_when_event_not_found(self, client, service):
+        service.add_participant.side_effect = EventNotFoundError
+        payload = {"name": "Ivan", "surname": "Ivanov", "patronymic": "Ivanovich"}
+
+        async with client as c:
+            resp = await c.post(
+                f"/api/v1/events/{uuid.uuid7()}/participants", json=payload
+            )
+
+        assert resp.status_code == 404
+
+    @pytest.mark.asyncio
+    async def test_returns_400_when_participant_error(self, client, service):
+        service.add_participant.side_effect = ParticipantError("bad participant")
+        payload = {"name": "Ivan", "surname": "Ivanov", "patronymic": "Ivanovich"}
+
+        async with client as c:
+            resp = await c.post(
+                f"/api/v1/events/{uuid.uuid7()}/participants", json=payload
+            )
+
+        assert resp.status_code == 400
+
+    @pytest.mark.asyncio
+    async def test_returns_422_when_payload_is_invalid(self, client, service):
+        payload = {"name": "", "surname": "Ivanov", "patronymic": "Ivanovich"}
+
+        async with client as c:
+            resp = await c.post(
+                f"/api/v1/events/{uuid.uuid7()}/participants", json=payload
+            )
+
+        assert resp.status_code == 422
+
+
+@pytest.mark.unit
 class TestGetParticipants:
     @pytest.mark.asyncio
     async def test_returns_participants_page(self, client, service):
-        event_id = uuid.uuid4()
+        event_id = uuid.uuid7()
         participant = make_participant(event_id=event_id)
-        cursor = uuid.uuid4()
+        cursor = uuid.uuid7()
         service.get_participants.return_value = ([participant], cursor)
 
         async with client as c:
@@ -263,7 +340,7 @@ class TestGetParticipants:
         service.get_participants.side_effect = EventNotFoundError
 
         async with client as c:
-            resp = await c.get(f"/api/v1/events/{uuid.uuid4()}/participants")
+            resp = await c.get(f"/api/v1/events/{uuid.uuid7()}/participants")
 
         assert resp.status_code == 404
 
@@ -272,7 +349,7 @@ class TestGetParticipants:
         service.get_participants.side_effect = ParticipantNotFoundError
 
         async with client as c:
-            resp = await c.get(f"/api/v1/events/{uuid.uuid4()}/participants")
+            resp = await c.get(f"/api/v1/events/{uuid.uuid7()}/participants")
 
         assert resp.status_code == 404
 
@@ -281,6 +358,6 @@ class TestGetParticipants:
         service.get_participants.side_effect = PaginationError("bad pagination")
 
         async with client as c:
-            resp = await c.get(f"/api/v1/events/{uuid.uuid4()}/participants")
+            resp = await c.get(f"/api/v1/events/{uuid.uuid7()}/participants")
 
         assert resp.status_code == 400
