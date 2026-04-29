@@ -2,7 +2,13 @@ import uuid
 from dataclasses import dataclass
 from datetime import datetime
 
-from src.models.event import Event, Participant, EventTypeEnum, EventStatusEnum
+from src.models.event import (
+    Event,
+    EventStatusEnum,
+    EventTypeEnum,
+    Participant,
+    ParticipantEvent,
+)
 
 
 @dataclass
@@ -57,4 +63,36 @@ class ParticipantRow:
             surname=self.surname,
             patronymic=self.patronymic,
             have_team=self.have_team,
+        )
+
+
+@dataclass
+class ParticipantEventRow:
+    id: uuid.UUID
+    name: str
+    description: str
+    registration_start: datetime
+    registration_end: datetime
+    holding_start: datetime
+    holding_end: datetime
+    status: EventStatusEnum
+    total_places: int
+    current_participants: int
+    tracks_count: int
+    user_role: str
+
+    def to_model(self) -> ParticipantEvent:
+        return ParticipantEvent(
+            id=self.id,
+            name=self.name,
+            description=self.description,
+            registration_start=self.registration_start,
+            registration_end=self.registration_end,
+            holding_start=self.holding_start,
+            holding_end=self.holding_end,
+            status=self.status,
+            total_places=self.total_places,
+            current_participants=self.current_participants,
+            tracks_count=self.tracks_count,
+            user_role=self.user_role,
         )

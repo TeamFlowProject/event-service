@@ -1,6 +1,6 @@
 from typing import Optional
 from src.service.event.protocols import EventRepository, KafkaProducer
-from src.models.event import Event, Participant, EventStatusEnum
+from src.models.event import Event, EventStatusEnum, Participant, ParticipantEvent
 import src.adapters.repository.errors as adapter_errors
 import src.service.errors as service_errors
 import uuid
@@ -196,4 +196,39 @@ class EventService:
         except adapter_errors.ParticipantNotFoundError as e:
             raise service_errors.ParticipantNotFoundError(
                 "Failed to get participant"
+            ) from e
+
+    async def get_participant_events(
+        self,
+        participant_id: uuid.UUID,
+        offset: Optional[int] = None,
+        event_id: Optional[uuid.UUID] = None,
+        limit: int = 10,
+    ) -> tuple[list[ParticipantEvent], Optional[uuid.UUID]]:
+        """
+        Get events for participant
+        """
+        if (event_id is not None) and (offset is not None):
+            raise service_errors.PaginationError(
+                "Event id or offset must be specified"
+            ) from None
+
+        try:
+            if event_id:
+                return await self._event_repository.get_participant_events_by_id(
+                    participant_id, event_id, limit
+                )
+            if offset is not None:
+                return await self._event_repository.get_participant_events_by_num(
+                    participant_id, offset, limit
+                )
+            raise service_errors.PaginationError(
+                "Event id or offset must be specified"
+            ) from None
+
+        except adapter_errors.EventNotFoundError as e:
+            raise service_errors.EventNotFoundError("Failed to get event") from e
+        except adapter_errors.ParticipantNotFoundError as e:
+            raise service_errors.ParticipantNotFoundError(
+                "Failed to get events"
             ) from e

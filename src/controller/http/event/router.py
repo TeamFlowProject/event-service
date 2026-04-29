@@ -11,6 +11,8 @@ from src.controller.http.event.schemas import (
     EventResponse,
     EventsPageResponse,
     Participant,
+    ParticipantEvent,
+    ParticipantEventsPageResponse,
     ParticipantsPageResponse,
     UpdateEventRequest,
     Event,
@@ -211,5 +213,52 @@ def create_event_router(event_service: EventService) -> APIRouter:
             raise HTTPException(status_code=404, detail="Participant not found")
         except PaginationError as exc:
             raise HTTPException(status_code=400, detail=str(exc))
+
+    @router.get(
+        "/participants/{participant_id}/events",
+        response_model=ParticipantEventsPageResponse,
+    )
+    async def get_participant_events(
+            participant_id: uuid.UUID,
+            event_id: Optional[uuid.UUID] = None,
+            offset: Optional[int] = None,
+            limit: int = 10,
+    ):
+        """
+        Get events for a specific participant
+        """
+        try:
+            events, next_cursor = await event_service.get_participant_events(
+                participant_id=participant_id,
+                event_id=event_id,
+                offset=offset,
+                limit=limit,
+            )
+        except PaginationError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+        except ParticipantNotFoundError:
+            raise HTTPException(status_code=404, detail="Participant not found")
+        except EventNotFoundError:
+            raise HTTPException(status_code=404, detail="Event not found")
+
+        items = [
+            ParticipantEvent(
+                id=e.id,
+                name=e.name,
+                description=e.description,
+                status=e.status,
+                total_places=e.total_places,
+                current_participants=e.current_participants,
+                tracks_count=e.tracks_count,
+                registration_start=e.registration_start,
+                registration_end=e.registration_end,
+                holding_start=e.holding_start,
+                holding_end=e.holding_end,
+                user_role=e.user_role,
+            )
+            for e in events
+        ]
+
+        return ParticipantEventsPageResponse(items=items, next_cursor=next_cursor)
 
     return router

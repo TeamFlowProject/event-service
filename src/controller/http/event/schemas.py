@@ -111,3 +111,23 @@ class CreateParticipantRequest(BaseModel):
 class ParticipantsPageResponse(BaseModel):
     items: list[Participant]
     next_cursor: uuid.UUID | None = None
+
+
+class ParticipantEvent(BaseModel):
+    id: uuid.UUID
+    name: str
+    description: str
+    status: EventStatusEnum
+    total_places: int
+    current_participants: int
+    tracks_count: int
+    registration_start: datetime
+    registration_end: datetime
+    holding_start: datetime
+    holding_end: datetime
+    user_role: str
+
+
+class ParticipantEventsPageResponse(BaseModel):
+    items: list[ParticipantEvent]
+    next_cursor: uuid.UUID | None = None

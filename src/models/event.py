@@ -44,3 +44,19 @@ class Participant:
     surname: str
     patronymic: str
     have_team: bool
+
+
+@dataclass
+class ParticipantEvent:
+    id: uuid.UUID
+    name: str
+    description: str
+    status: EventStatusEnum
+    total_places: int
+    current_participants: int
+    tracks_count: int
+    registration_start: datetime
+    registration_end: datetime
+    holding_start: datetime
+    holding_end: datetime
+    user_role: str

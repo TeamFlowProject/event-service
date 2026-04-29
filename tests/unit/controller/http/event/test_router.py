@@ -12,6 +12,7 @@ from src.models.event import (
     EventStatusEnum,
     EventTypeEnum,
     Participant as ParticipantModel,
+    ParticipantEvent as ParticipantEventModel,
 )
 from src.service.errors import (
     EventNotFoundError,
@@ -52,6 +53,25 @@ def make_participant(**kwargs) -> ParticipantModel:
     )
     defaults.update(kwargs)
     return ParticipantModel(**defaults)  # type: ignore[arg-type]
+
+
+def make_participant_event(**kwargs) -> ParticipantEventModel:
+    defaults = dict(
+        id=uuid.uuid7(),
+        name="Test Event",
+        description="Test event description",
+        status=EventStatusEnum.OPEN,
+        total_places=100,
+        current_participants=15,
+        tracks_count=3,
+        registration_start=datetime(2026, 1, 1),
+        registration_end=datetime(2026, 1, 10),
+        holding_start=datetime(2026, 1, 11),
+        holding_end=datetime(2026, 1, 12),
+        user_role="PARTICIPANT",
+    )
+    defaults.update(kwargs)
+    return ParticipantEventModel(**defaults)  # type: ignore[arg-type]
 
 
 def make_create_payload(**kwargs) -> dict:
@@ -361,3 +381,79 @@ class TestGetParticipants:
             resp = await c.get(f"/api/v1/events/{uuid.uuid7()}/participants")
 
         assert resp.status_code == 400
+
+
+@pytest.mark.unit
+class TestGetParticipantEvents:
+    @pytest.mark.asyncio
+    async def test_returns_participant_events_page(self, client, service):
+        participant_id = uuid.uuid7()
+        event = make_participant_event()
+        cursor = uuid.uuid7()
+        service.get_participant_events.return_value = ([event], cursor)
+
+        async with client as c:
+            resp = await c.get(
+                f"/api/v1/participants/{participant_id}/events",
+                params={"offset": 0, "limit": 10},
+            )
+
+        assert resp.status_code == 200
+        data = resp.json()
+        assert len(data["items"]) == 1
+        assert data["items"][0]["id"] == str(event.id)
+        assert data["items"][0]["name"] == event.name
+        assert data["items"][0]["total_places"] == event.total_places
+        assert data["items"][0]["current_participants"] == event.current_participants
+        assert data["items"][0]["tracks_count"] == event.tracks_count
+        assert data["items"][0]["user_role"] == event.user_role
+        assert data["next_cursor"] == str(cursor)
+
+    @pytest.mark.asyncio
+    async def test_calls_service_with_query_params(self, client, service):
+        participant_id = uuid.uuid7()
+        service.get_participant_events.return_value = ([], None)
+        event_id = uuid.uuid7()
+
+        async with client as c:
+            await c.get(
+                f"/api/v1/participants/{participant_id}/events",
+                params={"event_id": str(event_id), "limit": 10},
+            )
+
+        service.get_participant_events.assert_called_once_with(
+            participant_id=participant_id,
+            event_id=event_id,
+            offset=None,
+            limit=10,
+        )
+
+    @pytest.mark.asyncio
+    async def test_returns_400_when_pagination_error(self, client, service):
+        service.get_participant_events.side_effect = PaginationError("bad pagination")
+
+        async with client as c:
+            resp = await c.get(f"/api/v1/participants/{uuid.uuid7()}/events")
+
+        assert resp.status_code == 400
+
+    @pytest.mark.asyncio
+    async def test_returns_404_when_participant_not_found(self, client, service):
+        service.get_participant_events.side_effect = ParticipantNotFoundError
+
+        async with client as c:
+            resp = await c.get(f"/api/v1/participants/{uuid.uuid7()}/events")
+
+        assert resp.status_code == 404
+
+    @pytest.mark.asyncio
+    async def test_returns_404_when_event_not_found(self, client, service):
+        service.get_participant_events.side_effect = EventNotFoundError
+
+        async with client as c:
+            resp = await c.get(
+                f"/api/v1/participants/{uuid.uuid7()}/events",
+                params={"event_id": str(uuid.uuid7())},
+            )
+
+        assert resp.status_code == 404

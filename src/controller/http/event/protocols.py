@@ -1,7 +1,11 @@
 import uuid
 from typing import Optional, Protocol
 
-from src.models.event import Event as EventModel, Participant as ParticipantModel
+from src.models.event import (
+    Event as EventModel,
+    Participant as ParticipantModel,
+    ParticipantEvent as ParticipantEventModel,
+)
 
 
 class EventService(Protocol):
@@ -31,3 +35,11 @@ class EventService(Protocol):
         participant_id: Optional[uuid.UUID] = None,
         limit: int = 10,
     ) -> tuple[list[ParticipantModel], Optional[uuid.UUID]]: ...
+
+    async def get_participant_events(
+        self,
+        participant_id: uuid.UUID,
+        event_id: Optional[uuid.UUID] = None,
+        offset: Optional[int] = None,
+        limit: int = 10,
+    ) -> tuple[list[ParticipantEventModel], Optional[uuid.UUID]]: ...

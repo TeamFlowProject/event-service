@@ -173,3 +173,68 @@ SELECT_PARTICIPANTS_QUERY_BY_ID = """
     ORDER BY p.id DESC
     LIMIT %(limit)s
 """
+SELECT_PARTICIPANT_EVENTS_QUERY_BY_ID = """
+    SELECT
+        e.id,
+        e.name,
+        e.description,
+        e.registration_start,
+        e.registration_end,
+        e.holding_start,
+        e.holding_end,
+        e.status,
+        COALESCE((
+            SELECT SUM(t.max_participants_count)::int
+            FROM tracks t
+            WHERE t.event_id = e.id
+        ), 0) AS total_places,
+        (
+            SELECT COUNT(*)::int
+            FROM event_participants ep2
+            WHERE ep2.event_id = e.id
+        ) AS current_participants,
+        (
+            SELECT COUNT(*)::int
+            FROM tracks t2
+            WHERE t2.event_id = e.id
+        ) AS tracks_count,
+        'PARTICIPANT'::text AS user_role
+    FROM events e
+    INNER JOIN event_participants ep ON ep.event_id = e.id
+    WHERE ep.participant_id = %(participant_id)s
+      AND e.id < %(event_id)s
+    ORDER BY e.id DESC
+    LIMIT %(limit)s
+"""
+SELECT_PARTICIPANT_EVENTS_QUERY_BY_NUM = """
+    SELECT
+        e.id,
+        e.name,
+        e.description,
+        e.registration_start,
+        e.registration_end,
+        e.holding_start,
+        e.holding_end,
+        e.status,
+        COALESCE((
+            SELECT SUM(t.max_participants_count)::int
+            FROM tracks t
+            WHERE t.event_id = e.id
+        ), 0) AS total_places,
+        (
+            SELECT COUNT(*)::int
+            FROM event_participants ep2
+            WHERE ep2.event_id = e.id
+        ) AS current_participants,
+        (
+            SELECT COUNT(*)::int
+            FROM tracks t2
+            WHERE t2.event_id = e.id
+        ) AS tracks_count,
+        'PARTICIPANT'::text AS user_role
+    FROM events e
+    INNER JOIN event_participants ep ON ep.event_id = e.id
+    WHERE ep.participant_id = %(participant_id)s
+    ORDER BY e.id DESC
+    OFFSET %(offset)s LIMIT %(limit)s
+"""
