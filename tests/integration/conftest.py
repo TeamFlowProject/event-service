@@ -17,7 +17,7 @@ from src.service.event.service import EventService
 from src.service.track.service import TrackService
 
 
-@pytest.fixture()
+@pytest.fixture(scope="session")
 def postgres_container():
     with PostgresContainer("postgres:17") as pg:
         host = pg.get_container_host_ip()
@@ -31,7 +31,7 @@ def postgres_container():
         yield dsn
 
 
-@pytest_asyncio.fixture()
+@pytest_asyncio.fixture(scope="session", loop_scope="session")
 async def pool(postgres_container):
     async with psycopg_pool.AsyncConnectionPool(
         conninfo=postgres_container,
@@ -41,12 +41,12 @@ async def pool(postgres_container):
         yield pool
 
 
-@pytest_asyncio.fixture()
+@pytest_asyncio.fixture(scope="session")
 async def track_repository(pool):
     return TrackPostgresRepository(pool)
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def kafka_container():
     with KafkaContainer() as kafka:
         yield kafka.get_bootstrap_server()
@@ -68,7 +68,7 @@ async def track_service(track_repository, kafka_producer_client):
     return TrackService(track_repository, kafka_producer_client)
 
 
-@pytest_asyncio.fixture()
+@pytest_asyncio.fixture(scope="session")
 async def event_repository(pool):
     return EventPostgresRepository(pool)
 
