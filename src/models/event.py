@@ -45,6 +45,7 @@ class Participant:
     surname: str
     patronymic: str
     have_team: bool
+    role_id: Optional[uuid.UUID] = None
 
 
 @dataclass
