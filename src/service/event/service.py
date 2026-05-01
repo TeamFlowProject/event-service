@@ -229,6 +229,4 @@ class EventService:
         except adapter_errors.EventNotFoundError as e:
             raise service_errors.EventNotFoundError("Failed to get event") from e
         except adapter_errors.ParticipantNotFoundError as e:
-            raise service_errors.ParticipantNotFoundError(
-                "Failed to get events"
-            ) from e
+            raise service_errors.ParticipantNotFoundError("Failed to get events") from e

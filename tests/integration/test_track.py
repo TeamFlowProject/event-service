@@ -1,5 +1,8 @@
 import json
 import uuid
+from typing import cast
+
+from uuid_extensions import uuid7
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 
@@ -15,7 +18,7 @@ from src.adapters.clients.topics import TRACK_CREATED, TRACK_DELETED, TRACK_UPDA
 @pytest_asyncio.fixture
 async def event_id(pool):
     event = Event(
-        id=uuid.uuid7(),
+        id=cast(uuid.UUID, uuid7()),
         name="Test Event",
         description="Test Description",
         type=EventTypeEnum.HACKATHON,
@@ -67,7 +70,7 @@ async def kafka_listener(bootstrap_server: str, topic: str):
     consumer = AIOKafkaConsumer(
         topic,
         bootstrap_servers=bootstrap_server,
-        group_id=f"test-group-{uuid.uuid7()}",
+        group_id=f"test-group-{cast(uuid.UUID, uuid7())}",
         consumer_timeout_ms=10000,
     )
     await consumer.start()
@@ -350,7 +353,9 @@ class TestTrackFullFlow:
 
     @pytest.mark.asyncio
     async def test_get_tracks_by_unknown_event_id_returns_empty(self, http_client):
-        response = await http_client.get(f"/api/v1/event/{uuid.uuid7()}/tracks")
+        response = await http_client.get(
+            f"/api/v1/event/{cast(uuid.UUID, uuid7())}/tracks"
+        )
         assert response.status_code == 200
         assert response.json() == []
 
@@ -388,7 +393,7 @@ class TestTrackFullFlow:
 
     @pytest.mark.asyncio
     async def test_create_track_with_unknown_event_id_returns_404(self, http_client):
-        payload = _track_payload(uuid.uuid7())
+        payload = _track_payload(cast(uuid.UUID, uuid7()))
 
         response = await http_client.post("/api/v1/track", json=payload)
 
@@ -396,16 +401,18 @@ class TestTrackFullFlow:
 
     @pytest.mark.asyncio
     async def test_get_track_not_found_returns_404(self, http_client):
-        response = await http_client.get(f"/api/v1/track/{uuid.uuid7()}")
+        response = await http_client.get(f"/api/v1/track/{cast(uuid.UUID, uuid7())}")
         assert response.status_code == 404
 
     @pytest.mark.asyncio
     async def test_update_track_not_found_returns_404(self, http_client, event_id):
         payload = _track_payload(event_id)
-        response = await http_client.put(f"/api/v1/track/{uuid.uuid7()}", json=payload)
+        response = await http_client.put(
+            f"/api/v1/track/{cast(uuid.UUID, uuid7())}", json=payload
+        )
         assert response.status_code == 404
 
     @pytest.mark.asyncio
     async def test_delete_track_not_found_returns_404(self, http_client):
-        response = await http_client.delete(f"/api/v1/track/{uuid.uuid7()}")
+        response = await http_client.delete(f"/api/v1/track/{cast(uuid.UUID, uuid7())}")
         assert response.status_code == 404

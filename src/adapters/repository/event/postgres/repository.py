@@ -20,7 +20,9 @@ from src.adapters.repository.event.postgres.queries import (
     SELECT_EVENTS_QUERY_BY_ID,
     SELECT_EVENTS_QUERY_BY_NUM,
     SELECT_PARTICIPANTS_QUERY_BY_NUM,
-    SELECT_PARTICIPANTS_QUERY_BY_ID, SELECT_PARTICIPANT_EVENTS_QUERY_BY_NUM, SELECT_PARTICIPANT_EVENTS_QUERY_BY_ID,
+    SELECT_PARTICIPANTS_QUERY_BY_ID,
+    SELECT_PARTICIPANT_EVENTS_QUERY_BY_NUM,
+    SELECT_PARTICIPANT_EVENTS_QUERY_BY_ID,
 )
 from src.models import Event
 from src.models.event import Participant, ParticipantEvent
@@ -297,8 +299,8 @@ class EventPostgresRepository:
                     {
                         "participant_id": str(participant_id),
                         "offset": offset,
-                        "limit": limit
-                    }
+                        "limit": limit,
+                    },
                 )
                 rows = await cursor.fetchall()
 
@@ -331,8 +333,8 @@ class EventPostgresRepository:
                     {
                         "participant_id": str(participant_id),
                         "event_id": str(event_id),
-                        "limit": limit
-                    }
+                        "limit": limit,
+                    },
                 )
                 rows = await cursor.fetchall()
 

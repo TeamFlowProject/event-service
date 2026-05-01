@@ -1,6 +1,7 @@
 import uuid
-from typing import Optional
+from typing import Optional, cast
 from datetime import datetime
+from uuid_extensions import uuid7
 
 from fastapi import APIRouter, HTTPException
 
@@ -33,7 +34,7 @@ def create_event_router(event_service: EventService) -> APIRouter:
 
     @router.post("/events", response_model=CreatedResourceResponse, status_code=201)
     async def create_event(request: CreateEventRequest):
-        event_id = uuid.uuid7()
+        event_id = cast(uuid.UUID, uuid7())
         event = EventModel(
             id=event_id,
             name=request.name,
@@ -159,8 +160,10 @@ def create_event_router(event_service: EventService) -> APIRouter:
         response_model=CreatedResourceResponse,
         status_code=201,
     )
-    async def create_participant(event_id: uuid.UUID, request: CreateParticipantRequest):
-        participant_id = uuid.uuid7()
+    async def create_participant(
+        event_id: uuid.UUID, request: CreateParticipantRequest
+    ):
+        participant_id = cast(uuid.UUID, uuid7())
         participant = ParticipantModel(
             id=participant_id,
             event_id=event_id,
@@ -219,10 +222,10 @@ def create_event_router(event_service: EventService) -> APIRouter:
         response_model=ParticipantEventsPageResponse,
     )
     async def get_participant_events(
-            participant_id: uuid.UUID,
-            event_id: Optional[uuid.UUID] = None,
-            offset: Optional[int] = None,
-            limit: int = 10,
+        participant_id: uuid.UUID,
+        event_id: Optional[uuid.UUID] = None,
+        offset: Optional[int] = None,
+        limit: int = 10,
     ):
         """
         Get events for a specific participant

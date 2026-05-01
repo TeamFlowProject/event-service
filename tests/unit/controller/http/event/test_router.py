@@ -1,6 +1,8 @@
 import uuid
 from datetime import datetime
+from typing import cast
 from unittest.mock import AsyncMock
+from uuid_extensions import uuid7
 
 import pytest
 from fastapi import FastAPI
@@ -24,7 +26,7 @@ from src.service.errors import (
 
 def make_event(**kwargs) -> EventModel:
     defaults = dict(
-        id=uuid.uuid7(),
+        id=cast(uuid.UUID, uuid7()),
         name="Test Event",
         description="Test event description",
         type=EventTypeEnum.HACKATHON,
@@ -44,8 +46,8 @@ def make_event(**kwargs) -> EventModel:
 
 def make_participant(**kwargs) -> ParticipantModel:
     defaults = dict(
-        id=uuid.uuid7(),
-        event_id=uuid.uuid7(),
+        id=cast(uuid.UUID, uuid7()),
+        event_id=cast(uuid.UUID, uuid7()),
         name="Ivan",
         surname="Ivanov",
         patronymic="Ivanovich",
@@ -57,7 +59,7 @@ def make_participant(**kwargs) -> ParticipantModel:
 
 def make_participant_event(**kwargs) -> ParticipantEventModel:
     defaults = dict(
-        id=uuid.uuid7(),
+        id=cast(uuid.UUID, uuid7()),
         name="Test Event",
         description="Test event description",
         status=EventStatusEnum.OPEN,
@@ -107,7 +109,7 @@ def client(service):
 class TestCreateEvent:
     @pytest.mark.asyncio
     async def test_returns_201_with_id(self, client, service):
-        event_id = uuid.uuid7()
+        event_id = cast(uuid.UUID, uuid7())
         service.create_event.return_value = event_id
 
         async with client as c:
@@ -118,7 +120,7 @@ class TestCreateEvent:
 
     @pytest.mark.asyncio
     async def test_calls_service(self, client, service):
-        service.create_event.return_value = uuid.uuid7()
+        service.create_event.return_value = cast(uuid.UUID, uuid7())
 
         async with client as c:
             await c.post("/api/v1/events", json=make_create_payload())
@@ -163,7 +165,7 @@ class TestGetEvent:
         service.get_event_by_id.side_effect = EventNotFoundError
 
         async with client as c:
-            resp = await c.get(f"/api/v1/events/{uuid.uuid7()}")
+            resp = await c.get(f"/api/v1/events/{cast(uuid.UUID, uuid7())}")
 
         assert resp.status_code == 404
 
@@ -172,7 +174,7 @@ class TestGetEvent:
 class TestUpdateEvent:
     @pytest.mark.asyncio
     async def test_returns_200(self, client, service):
-        event_id = uuid.uuid7()
+        event_id = cast(uuid.UUID, uuid7())
         current_event = make_event(id=event_id)
         service.get_event_by_id.return_value = current_event
 
@@ -187,7 +189,7 @@ class TestUpdateEvent:
 
     @pytest.mark.asyncio
     async def test_calls_service(self, client, service):
-        event_id = uuid.uuid7()
+        event_id = cast(uuid.UUID, uuid7())
         service.get_event_by_id.return_value = make_event(id=event_id)
 
         async with client as c:
@@ -200,7 +202,9 @@ class TestUpdateEvent:
         service.get_event_by_id.side_effect = EventNotFoundError
 
         async with client as c:
-            resp = await c.put(f"/api/v1/events/{uuid.uuid7()}", json={"name": "x"})
+            resp = await c.put(
+                f"/api/v1/events/{cast(uuid.UUID, uuid7())}", json={"name": "x"}
+            )
 
         assert resp.status_code == 404
 
@@ -210,13 +214,13 @@ class TestDeleteEvent:
     @pytest.mark.asyncio
     async def test_returns_204(self, client, service):
         async with client as c:
-            resp = await c.delete(f"/api/v1/events/{uuid.uuid7()}")
+            resp = await c.delete(f"/api/v1/events/{cast(uuid.UUID, uuid7())}")
 
         assert resp.status_code == 204
 
     @pytest.mark.asyncio
     async def test_calls_service(self, client, service):
-        event_id = uuid.uuid7()
+        event_id = cast(uuid.UUID, uuid7())
 
         async with client as c:
             await c.delete(f"/api/v1/events/{event_id}")
@@ -228,7 +232,7 @@ class TestDeleteEvent:
         service.delete_event.side_effect = EventNotFoundError
 
         async with client as c:
-            resp = await c.delete(f"/api/v1/events/{uuid.uuid7()}")
+            resp = await c.delete(f"/api/v1/events/{cast(uuid.UUID, uuid7())}")
 
         assert resp.status_code == 404
 
@@ -239,7 +243,7 @@ class TestGetEvents:
     async def test_returns_events_page(self, client, service):
         event_1 = make_event()
         event_2 = make_event()
-        next_cursor = uuid.uuid7()
+        next_cursor = cast(uuid.UUID, uuid7())
         service.get_events_page.return_value = ([event_1, event_2], next_cursor)
 
         async with client as c:
@@ -264,7 +268,7 @@ class TestGetEvents:
 class TestCreateParticipant:
     @pytest.mark.asyncio
     async def test_returns_201_with_id(self, client, service):
-        event_id = uuid.uuid7()
+        event_id = cast(uuid.UUID, uuid7())
         payload = {
             "name": "Ivan",
             "surname": "Ivanov",
@@ -280,7 +284,7 @@ class TestCreateParticipant:
 
     @pytest.mark.asyncio
     async def test_calls_service(self, client, service):
-        event_id = uuid.uuid7()
+        event_id = cast(uuid.UUID, uuid7())
         payload = {
             "name": "Ivan",
             "surname": "Ivanov",
@@ -307,7 +311,7 @@ class TestCreateParticipant:
 
         async with client as c:
             resp = await c.post(
-                f"/api/v1/events/{uuid.uuid7()}/participants", json=payload
+                f"/api/v1/events/{cast(uuid.UUID, uuid7())}/participants", json=payload
             )
 
         assert resp.status_code == 404
@@ -319,7 +323,7 @@ class TestCreateParticipant:
 
         async with client as c:
             resp = await c.post(
-                f"/api/v1/events/{uuid.uuid7()}/participants", json=payload
+                f"/api/v1/events/{cast(uuid.UUID, uuid7())}/participants", json=payload
             )
 
         assert resp.status_code == 400
@@ -330,7 +334,7 @@ class TestCreateParticipant:
 
         async with client as c:
             resp = await c.post(
-                f"/api/v1/events/{uuid.uuid7()}/participants", json=payload
+                f"/api/v1/events/{cast(uuid.UUID, uuid7())}/participants", json=payload
             )
 
         assert resp.status_code == 422
@@ -340,9 +344,9 @@ class TestCreateParticipant:
 class TestGetParticipants:
     @pytest.mark.asyncio
     async def test_returns_participants_page(self, client, service):
-        event_id = uuid.uuid7()
+        event_id = cast(uuid.UUID, uuid7())
         participant = make_participant(event_id=event_id)
-        cursor = uuid.uuid7()
+        cursor = cast(uuid.UUID, uuid7())
         service.get_participants.return_value = ([participant], cursor)
 
         async with client as c:
@@ -360,7 +364,9 @@ class TestGetParticipants:
         service.get_participants.side_effect = EventNotFoundError
 
         async with client as c:
-            resp = await c.get(f"/api/v1/events/{uuid.uuid7()}/participants")
+            resp = await c.get(
+                f"/api/v1/events/{cast(uuid.UUID, uuid7())}/participants"
+            )
 
         assert resp.status_code == 404
 
@@ -369,7 +375,9 @@ class TestGetParticipants:
         service.get_participants.side_effect = ParticipantNotFoundError
 
         async with client as c:
-            resp = await c.get(f"/api/v1/events/{uuid.uuid7()}/participants")
+            resp = await c.get(
+                f"/api/v1/events/{cast(uuid.UUID, uuid7())}/participants"
+            )
 
         assert resp.status_code == 404
 
@@ -378,7 +386,9 @@ class TestGetParticipants:
         service.get_participants.side_effect = PaginationError("bad pagination")
 
         async with client as c:
-            resp = await c.get(f"/api/v1/events/{uuid.uuid7()}/participants")
+            resp = await c.get(
+                f"/api/v1/events/{cast(uuid.UUID, uuid7())}/participants"
+            )
 
         assert resp.status_code == 400
 
@@ -387,9 +397,9 @@ class TestGetParticipants:
 class TestGetParticipantEvents:
     @pytest.mark.asyncio
     async def test_returns_participant_events_page(self, client, service):
-        participant_id = uuid.uuid7()
+        participant_id = cast(uuid.UUID, uuid7())
         event = make_participant_event()
-        cursor = uuid.uuid7()
+        cursor = cast(uuid.UUID, uuid7())
         service.get_participant_events.return_value = ([event], cursor)
 
         async with client as c:
@@ -411,9 +421,9 @@ class TestGetParticipantEvents:
 
     @pytest.mark.asyncio
     async def test_calls_service_with_query_params(self, client, service):
-        participant_id = uuid.uuid7()
+        participant_id = cast(uuid.UUID, uuid7())
         service.get_participant_events.return_value = ([], None)
-        event_id = uuid.uuid7()
+        event_id = cast(uuid.UUID, uuid7())
 
         async with client as c:
             await c.get(
@@ -433,7 +443,9 @@ class TestGetParticipantEvents:
         service.get_participant_events.side_effect = PaginationError("bad pagination")
 
         async with client as c:
-            resp = await c.get(f"/api/v1/participants/{uuid.uuid7()}/events")
+            resp = await c.get(
+                f"/api/v1/participants/{cast(uuid.UUID, uuid7())}/events"
+            )
 
         assert resp.status_code == 400
 
@@ -442,7 +454,9 @@ class TestGetParticipantEvents:
         service.get_participant_events.side_effect = ParticipantNotFoundError
 
         async with client as c:
-            resp = await c.get(f"/api/v1/participants/{uuid.uuid7()}/events")
+            resp = await c.get(
+                f"/api/v1/participants/{cast(uuid.UUID, uuid7())}/events"
+            )
 
         assert resp.status_code == 404
 
@@ -452,8 +466,8 @@ class TestGetParticipantEvents:
 
         async with client as c:
             resp = await c.get(
-                f"/api/v1/participants/{uuid.uuid7()}/events",
-                params={"event_id": str(uuid.uuid7())},
+                f"/api/v1/participants/{cast(uuid.UUID, uuid7())}/events",
+                params={"event_id": str(cast(uuid.UUID, uuid7()))},
             )
 
         assert resp.status_code == 404
