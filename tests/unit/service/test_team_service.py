@@ -93,7 +93,7 @@ class TestCreateTeam:
         result = await service.create_team(team)
 
         assert isinstance(result, uuid.UUID)
-        repo.get_member_by_id.assert_called_once_with(team.owner.id)
+        repo.get_member_by_id.assert_called_once_with(team.owner.id, team.event_id)
         repo.create_team.assert_called_once_with(team)
         kafka.send_team_created.assert_called_once_with(team)
 
@@ -107,7 +107,7 @@ class TestCreateTeam:
 
         await service.create_team(team)
 
-        repo.get_member_by_id.assert_called_once_with(team.owner.id)
+        repo.get_member_by_id.assert_called_once_with(team.owner.id, team.event_id)
         repo.create_team.assert_called_once_with(team)
         kafka.send_team_created.assert_called_once_with(team)
 
@@ -123,7 +123,7 @@ class TestCreateTeam:
         with pytest.raises(service_errors.ParticipantAlreadyInTeam):
             await service.create_team(team)
 
-        repo.get_member_by_id.assert_called_once_with(team.owner.id)
+        repo.get_member_by_id.assert_called_once_with(team.owner.id, team.event_id)
         repo.create_team.assert_not_called()
         kafka.send_team_created.assert_not_called()
 
@@ -138,7 +138,7 @@ class TestCreateTeam:
         with pytest.raises(service_errors.EventNotFoundError):
             await service.create_team(team)
 
-        repo.get_member_by_id.assert_called_once_with(team.owner.id)
+        repo.get_member_by_id.assert_called_once_with(team.owner.id, team.event_id)
         repo.create_team.assert_called_once_with(team)
         kafka.send_team_created.assert_not_called()
 
@@ -150,7 +150,7 @@ class TestCreateTeam:
         with pytest.raises(service_errors.ParticipantNotFoundError):
             await service.create_team(team)
 
-        repo.get_member_by_id.assert_called_once_with(team.owner.id)
+        repo.get_member_by_id.assert_called_once_with(team.owner.id, team.event_id)
         repo.create_team.assert_not_called()
         kafka.send_team_created.assert_not_called()
 
@@ -165,7 +165,7 @@ class TestCreateTeam:
         with pytest.raises(service_errors.TrackNotFoundError):
             await service.create_team(team)
 
-        repo.get_member_by_id.assert_called_once_with(team.owner.id)
+        repo.get_member_by_id.assert_called_once_with(team.owner.id, team.event_id)
         repo.create_team.assert_called_once_with(team)
         kafka.send_team_created.assert_not_called()
 
@@ -180,7 +180,7 @@ class TestCreateTeam:
         with pytest.raises(service_errors.TeamAlreadyExistsError):
             await service.create_team(team)
 
-        repo.get_member_by_id.assert_called_once_with(team.owner.id)
+        repo.get_member_by_id.assert_called_once_with(team.owner.id, team.event_id)
         repo.create_team.assert_called_once_with(team)
         kafka.send_team_created.assert_not_called()
 
@@ -259,7 +259,7 @@ class TestLeaveTeam:
         await service.leave_team(team_id, member_id)
 
         repo.get_team.assert_called_once_with(team_id)
-        repo.get_member_by_id.assert_called_once_with(member_id)
+        repo.get_member_by_id.assert_called_once_with(member_id, team.event_id)
         repo.remove_member.assert_called_once_with(team_id, member_id)
         kafka.send_member_left.assert_called_once_with(team, member)
 
@@ -280,7 +280,7 @@ class TestLeaveTeam:
 
         assert "Failed to find member" in str(exc_info.value)
         repo.get_team.assert_called_once_with(team_id)
-        repo.get_member_by_id.assert_called_once_with(member_id)
+        repo.get_member_by_id.assert_called_once_with(member_id, team.event_id)
         repo.remove_member.assert_not_called()
         kafka.send_member_left.assert_not_called()
 
@@ -342,7 +342,7 @@ class TestKickMember:
         await service.kick_member(team_id, member_id)
 
         repo.get_team.assert_called_once_with(team_id)
-        repo.get_member_by_id.assert_called_once_with(member_id)
+        repo.get_member_by_id.assert_called_once_with(member_id, team.event_id)
         repo.remove_member.assert_called_once_with(team_id, member_id)
         kafka.send_member_kicked.assert_called_once_with(team, member)
 
@@ -396,7 +396,7 @@ class TestKickMember:
 
         assert "Failed to find member" in str(exc_info.value)
         repo.get_team.assert_called_once_with(team_id)
-        repo.get_member_by_id.assert_called_once_with(member_id)
+        repo.get_member_by_id.assert_called_once_with(member_id, team.event_id)
         repo.remove_member.assert_not_called()
         kafka.send_member_kicked.assert_not_called()
 
