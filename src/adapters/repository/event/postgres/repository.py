@@ -5,7 +5,11 @@ import psycopg.rows
 import psycopg_pool
 
 from src.adapters.repository.errors import EventNotFoundError
-from src.adapters.repository.event.postgres.models import EventRow, ParticipantRow
+from src.adapters.repository.event.postgres.models import (
+    EventRow,
+    ParticipantEventRow,
+    ParticipantRow,
+)
 from src.adapters.repository.event.postgres.queries import (
     CREATE_EVENT_QUERY,
     UPDATE_EVENT_QUERY,
@@ -17,9 +21,11 @@ from src.adapters.repository.event.postgres.queries import (
     SELECT_EVENTS_QUERY_BY_NUM,
     SELECT_PARTICIPANTS_QUERY_BY_NUM,
     SELECT_PARTICIPANTS_QUERY_BY_ID,
+    SELECT_PARTICIPANT_EVENTS_QUERY_BY_NUM,
+    SELECT_PARTICIPANT_EVENTS_QUERY_BY_ID,
 )
 from src.models import Event
-from src.models.event import Participant
+from src.models.event import Participant, ParticipantEvent
 
 
 class EventPostgresRepository:
@@ -269,5 +275,73 @@ class EventPostgresRepository:
 
                 return (
                     [row.to_model(event_id) for row in rows],
+                    rows[-1].id,
+                )
+
+    async def get_participant_events_by_num(
+        self, participant_id: uuid.UUID, offset: int, limit: int
+    ) -> tuple[list[ParticipantEvent], Optional[uuid.UUID]]:
+        """
+        Get participant events page by num
+        Args:
+            participant_id (uuid.UUID): The id of the participant to get events
+            offset (int): The offset of the page
+            limit (int): The number of events to get
+        Returns:
+            tuple[list[Event], Optional[uuid.UUID]]: The events page and cursor
+        """
+        async with self._pool.connection() as conn:
+            async with conn.cursor(
+                row_factory=psycopg.rows.class_row(ParticipantEventRow)
+            ) as cursor:
+                await cursor.execute(
+                    SELECT_PARTICIPANT_EVENTS_QUERY_BY_NUM,
+                    {
+                        "participant_id": str(participant_id),
+                        "offset": offset,
+                        "limit": limit,
+                    },
+                )
+                rows = await cursor.fetchall()
+
+                if not rows:
+                    return [], None
+
+                return (
+                    [row.to_model() for row in rows],
+                    rows[-1].id,
+                )
+
+    async def get_participant_events_by_id(
+        self, participant_id: uuid.UUID, event_id: uuid.UUID, limit: int
+    ) -> tuple[list[ParticipantEvent], Optional[uuid.UUID]]:
+        """
+        Get participant events page by id (cursor-based pagination)
+        Args:
+            participant_id (uuid.UUID): The id of the participant to get events
+            event_id (uuid.UUID): The cursor event id (get events before this id)
+            limit (int): The number of events to get
+        Returns:
+            tuple[list[Event], Optional[uuid.UUID]]: The events page and cursor
+        """
+        async with self._pool.connection() as conn:
+            async with conn.cursor(
+                row_factory=psycopg.rows.class_row(ParticipantEventRow)
+            ) as cursor:
+                await cursor.execute(
+                    SELECT_PARTICIPANT_EVENTS_QUERY_BY_ID,
+                    {
+                        "participant_id": str(participant_id),
+                        "event_id": str(event_id),
+                        "limit": limit,
+                    },
+                )
+                rows = await cursor.fetchall()
+
+                if not rows:
+                    return [], None
+
+                return (
+                    [row.to_model() for row in rows],
                     rows[-1].id,
                 )

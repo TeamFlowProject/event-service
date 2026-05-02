@@ -1,10 +1,9 @@
 import uuid
 from datetime import datetime, timezone
+from typing import cast
 
 import pytest
-from typing import cast
 from uuid_extensions import uuid7
-
 import pytest_asyncio
 
 from src.adapters.repository.errors import EventNotFoundError

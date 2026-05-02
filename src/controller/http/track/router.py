@@ -2,6 +2,7 @@ import uuid
 from typing import cast
 
 from uuid_extensions import uuid7
+
 from fastapi import APIRouter, HTTPException
 
 from src.controller.http.track.schemas import (

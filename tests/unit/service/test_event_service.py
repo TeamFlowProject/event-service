@@ -1,10 +1,9 @@
 import uuid
 from datetime import datetime
+from typing import cast
 from unittest.mock import AsyncMock
 
 import pytest
-
-from typing import cast
 from uuid_extensions import uuid7
 
 import src.adapters.repository.errors as adapter_errors
@@ -273,7 +272,8 @@ class TestGetParticipants:
 
         with pytest.raises(service_errors.EventNotFoundError):
             await service.get_participants(
-                event_id=cast(uuid.UUID, uuid7()), participant_id=uuid7()
+                event_id=cast(uuid.UUID, uuid7()),
+                participant_id=cast(uuid.UUID, uuid7()),
             )
 
     @pytest.mark.asyncio
@@ -284,5 +284,6 @@ class TestGetParticipants:
 
         with pytest.raises(service_errors.ParticipantNotFoundError):
             await service.get_participants(
-                event_id=cast(uuid.UUID, uuid7()), participant_id=uuid7()
+                event_id=cast(uuid.UUID, uuid7()),
+                participant_id=cast(uuid.UUID, uuid7()),
             )
