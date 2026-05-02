@@ -79,6 +79,7 @@ def make_participant_event(**kwargs) -> ParticipantEventModel:
             count=0,
         ),
     )
+
     defaults.update(kwargs)
     return ParticipantEventModel(**defaults)  # type: ignore[arg-type]
 
