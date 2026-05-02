@@ -60,10 +60,10 @@ class KafkaProducerClient:
             value=EventUpdated.from_model(event),
         )
 
-    async def send_delete_event(self, event_id: uuid.UUID) -> None:
+    async def send_delete_event(self, event: Event) -> None:
         await self._producer.send_and_wait(
             topic=EVENT_DELETED,
-            value=EventDeleted.from_model(event_id),
+            value=EventDeleted.from_model(event),
         )
 
     async def send_participant(self, event: Event, participant_id: uuid.UUID) -> None:

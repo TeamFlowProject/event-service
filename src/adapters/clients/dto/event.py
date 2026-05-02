@@ -68,12 +68,7 @@ class EventCreated(EventDTO): ...
 class EventUpdated(EventDTO): ...
 
 
-class EventDeleted(BaseModel):
-    id: str
-
-    @classmethod
-    def from_model(cls, event_id: uuid.UUID) -> "EventDeleted":
-        return cls(id=str(event_id))
+class EventDeleted(EventDTO): ...
 
 
 class AddParticipant(BaseModel):

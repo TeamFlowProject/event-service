@@ -118,8 +118,9 @@ class EventService:
             EventNotFoundError: If the event could not be deleted
         """
         try:
+            event = await self._event_repository.get_event_by_id(event_id)
             await self._event_repository.delete_event(event_id)
-            await self._kafka_producer.send_delete_event(event_id)
+            await self._kafka_producer.send_delete_event(event)
         except adapter_errors.EventNotFoundError as e:
             raise service_errors.EventNotFoundError("Failed to delete event") from e
 
