@@ -11,10 +11,6 @@ from src.models.event import (
 )
 from src.models.track import Role
 
-_PARTICIPANT_FALLBACK_ROLE_ID = uuid.UUID("00000000-0000-0000-0000-000000000001")
-_PARTICIPANT_FALLBACK_TRACK_ID = uuid.UUID("00000000-0000-0000-0000-000000000000")
-
-
 @dataclass
 class EventRow:
     id: uuid.UUID
