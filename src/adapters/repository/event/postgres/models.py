@@ -9,6 +9,7 @@ from src.models.event import (
     Participant,
     ParticipantEvent,
 )
+from src.models.track import Role
 
 
 @dataclass
@@ -79,7 +80,7 @@ class ParticipantEventRow:
     total_places: int
     current_participants: int
     tracks_count: int
-    user_role: str
+    user_role: Role | None
 
     def to_model(self) -> ParticipantEvent:
         return ParticipantEvent(

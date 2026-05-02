@@ -3,6 +3,7 @@ import uuid
 
 from pydantic import BaseModel, Field, field_validator
 from src.models.event import EventStatusEnum, EventTypeEnum
+from src.models.track import Role
 
 
 class _EventRequestBase(BaseModel):
@@ -125,7 +126,7 @@ class ParticipantEvent(BaseModel):
     registration_end: datetime
     holding_start: datetime
     holding_end: datetime
-    user_role: str
+    user_role: Role | None
 
 
 class ParticipantEventsPageResponse(BaseModel):
