@@ -11,6 +11,7 @@ from src.models.event import (
 )
 from src.models.track import Role
 
+
 @dataclass
 class EventRow:
     id: uuid.UUID
