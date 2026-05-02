@@ -162,19 +162,23 @@ class TestDeleteEvent:
     @pytest.mark.asyncio
     async def test_calls_repo_and_kafka(self, service, repo, kafka):
         event_id = cast(uuid.UUID, uuid7())
+        mock_event = make_event(id=event_id)
+        repo.get_event_by_id.return_value = mock_event
 
         await service.delete_event(event_id)
 
+        repo.get_event_by_id.assert_called_once_with(event_id)
         repo.delete_event.assert_called_once_with(event_id)
-        kafka.send_delete_event.assert_called_once_with(event_id)
+        kafka.send_delete_event.assert_called_once_with(mock_event)
 
     @pytest.mark.asyncio
     async def test_raises_service_error_when_not_found(self, service, repo, kafka):
-        repo.delete_event.side_effect = adapter_errors.EventNotFoundError
+        repo.get_event_by_id.side_effect = adapter_errors.EventNotFoundError
 
         with pytest.raises(service_errors.EventNotFoundError):
             await service.delete_event(cast(uuid.UUID, uuid7()))
 
+        repo.delete_event.assert_not_called()
         kafka.send_delete_event.assert_not_called()
 
 
