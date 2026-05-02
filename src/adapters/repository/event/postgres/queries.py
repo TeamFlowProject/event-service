@@ -198,7 +198,14 @@ SELECT_PARTICIPANT_EVENTS_QUERY_BY_ID = """
             FROM tracks t2
             WHERE t2.event_id = e.id
         ) AS tracks_count,
-        'PARTICIPANT'::text AS user_role
+        COALESCE((
+            SELECT tp.role
+            FROM track_participants tp
+            JOIN tracks t3 ON t3.id = tp.track_id
+            WHERE tp.participant_id = ep.participant_id
+              AND t3.event_id = e.id
+            LIMIT 1
+        ), 'PARTICIPANT') AS user_role
     FROM events e
     INNER JOIN event_participants ep ON ep.event_id = e.id
     WHERE ep.participant_id = %(participant_id)s
@@ -231,7 +238,14 @@ SELECT_PARTICIPANT_EVENTS_QUERY_BY_NUM = """
             FROM tracks t2
             WHERE t2.event_id = e.id
         ) AS tracks_count,
-        'PARTICIPANT'::text AS user_role
+        COALESCE((
+            SELECT tp.role
+            FROM track_participants tp
+            JOIN tracks t3 ON t3.id = tp.track_id
+            WHERE tp.participant_id = ep.participant_id
+              AND t3.event_id = e.id
+            LIMIT 1
+        ), 'PARTICIPANT') AS user_role
     FROM events e
     INNER JOIN event_participants ep ON ep.event_id = e.id
     WHERE ep.participant_id = %(participant_id)s

@@ -4,6 +4,8 @@ from datetime import datetime
 from enum import Enum
 from typing import Optional
 
+from src.models.track import Role
+
 
 class EventStatusEnum(str, Enum):
     DRAFT = "DRAFT"
@@ -61,4 +63,4 @@ class ParticipantEvent:
     registration_end: datetime
     holding_start: datetime
     holding_end: datetime
-    user_role: str
+    user_role: Role | None
