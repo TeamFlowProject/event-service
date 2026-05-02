@@ -198,16 +198,29 @@ SELECT_PARTICIPANT_EVENTS_QUERY_BY_ID = """
             FROM tracks t2
             WHERE t2.event_id = e.id
         ) AS tracks_count,
-        COALESCE((
-            SELECT tp.role
-            FROM track_participants tp
-            JOIN tracks t3 ON t3.id = tp.track_id
-            WHERE tp.participant_id = ep.participant_id
-              AND t3.event_id = e.id
+        ur.id AS user_role_id,
+        ur.track_id AS user_role_track_id,
+        ur.name AS user_role_name,
+        ur.description AS user_role_description,
+        ur.count::int AS user_role_count,
+        (
+            SELECT t.id
+            FROM tracks t
+            WHERE t.event_id = e.id
+            ORDER BY t.id
             LIMIT 1
-        ), 'PARTICIPANT') AS user_role
+        ) AS event_first_track_id
     FROM events e
     INNER JOIN event_participants ep ON ep.event_id = e.id
+    LEFT JOIN LATERAL (
+        SELECT r.id, r.track_id, r.name, r.description, r.count
+        FROM team_members tm
+        INNER JOIN teams t3 ON t3.id = tm.team_id
+        INNER JOIN roles r ON r.id = tm.role_id
+        WHERE tm.member_id = ep.participant_id
+          AND t3.event_id = e.id
+        LIMIT 1
+    ) ur ON TRUE
     WHERE ep.participant_id = %(participant_id)s
       AND e.id < %(event_id)s
     ORDER BY e.id DESC
@@ -238,16 +251,29 @@ SELECT_PARTICIPANT_EVENTS_QUERY_BY_NUM = """
             FROM tracks t2
             WHERE t2.event_id = e.id
         ) AS tracks_count,
-        COALESCE((
-            SELECT tp.role
-            FROM track_participants tp
-            JOIN tracks t3 ON t3.id = tp.track_id
-            WHERE tp.participant_id = ep.participant_id
-              AND t3.event_id = e.id
+        ur.id AS user_role_id,
+        ur.track_id AS user_role_track_id,
+        ur.name AS user_role_name,
+        ur.description AS user_role_description,
+        ur.count::int AS user_role_count,
+        (
+            SELECT t.id
+            FROM tracks t
+            WHERE t.event_id = e.id
+            ORDER BY t.id
             LIMIT 1
-        ), 'PARTICIPANT') AS user_role
+        ) AS event_first_track_id
     FROM events e
     INNER JOIN event_participants ep ON ep.event_id = e.id
+    LEFT JOIN LATERAL (
+        SELECT r.id, r.track_id, r.name, r.description, r.count
+        FROM team_members tm
+        INNER JOIN teams t3 ON t3.id = tm.team_id
+        INNER JOIN roles r ON r.id = tm.role_id
+        WHERE tm.member_id = ep.participant_id
+          AND t3.event_id = e.id
+        LIMIT 1
+    ) ur ON TRUE
     WHERE ep.participant_id = %(participant_id)s
     ORDER BY e.id DESC
     OFFSET %(offset)s LIMIT %(limit)s

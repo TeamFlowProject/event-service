@@ -86,7 +86,15 @@ class TestParticipantEventsEndpoint:
                 "holding_end",
                 "user_role",
             }
-            assert first_item["user_role"] == "PARTICIPANT"
+            ur = first_item["user_role"]
+            assert ur["name"] == "PARTICIPANT"
+            assert set(ur.keys()) == {
+                "id",
+                "track_id",
+                "name",
+                "description",
+                "count",
+            }
         finally:
             await cleanup_db(pool)
 

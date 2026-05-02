@@ -16,6 +16,7 @@ from src.models.event import (
     Participant as ParticipantModel,
     ParticipantEvent as ParticipantEventModel,
 )
+from src.models.track import Role as RoleModel
 from src.service.errors import (
     EventNotFoundError,
     PaginationError,
@@ -70,7 +71,13 @@ def make_participant_event(**kwargs) -> ParticipantEventModel:
         registration_end=datetime(2026, 1, 10),
         holding_start=datetime(2026, 1, 11),
         holding_end=datetime(2026, 1, 12),
-        user_role="PARTICIPANT",
+        user_role=RoleModel(
+            id=cast(uuid.UUID, uuid7()),
+            track_id=cast(uuid.UUID, uuid7()),
+            name="PARTICIPANT",
+            description="",
+            count=0,
+        ),
     )
     defaults.update(kwargs)
     return ParticipantEventModel(**defaults)  # type: ignore[arg-type]
@@ -416,7 +423,13 @@ class TestGetParticipantEvents:
         assert data["items"][0]["total_places"] == event.total_places
         assert data["items"][0]["current_participants"] == event.current_participants
         assert data["items"][0]["tracks_count"] == event.tracks_count
-        assert data["items"][0]["user_role"] == event.user_role
+        assert data["items"][0]["user_role"] == {
+            "id": str(event.user_role.id),
+            "track_id": str(event.user_role.track_id),
+            "name": event.user_role.name,
+            "description": event.user_role.description,
+            "count": event.user_role.count,
+        }
         assert data["next_cursor"] == str(cursor)
 
     @pytest.mark.asyncio

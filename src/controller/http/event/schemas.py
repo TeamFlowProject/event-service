@@ -126,7 +126,7 @@ class ParticipantEvent(BaseModel):
     registration_end: datetime
     holding_start: datetime
     holding_end: datetime
-    user_role: Role | None
+    user_role: Role
 
 
 class ParticipantEventsPageResponse(BaseModel):

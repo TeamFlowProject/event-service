@@ -11,6 +11,9 @@ from src.models.event import (
 )
 from src.models.track import Role
 
+_PARTICIPANT_FALLBACK_ROLE_ID = uuid.UUID("00000000-0000-0000-0000-000000000001")
+_PARTICIPANT_FALLBACK_TRACK_ID = uuid.UUID("00000000-0000-0000-0000-000000000000")
+
 
 @dataclass
 class EventRow:
@@ -80,7 +83,29 @@ class ParticipantEventRow:
     total_places: int
     current_participants: int
     tracks_count: int
-    user_role: Role | None
+    user_role_id: uuid.UUID | None
+    user_role_track_id: uuid.UUID | None
+    user_role_name: str | None
+    user_role_description: str | None
+    user_role_count: int | None
+    event_first_track_id: uuid.UUID | None
+
+    def _user_role(self) -> Role:
+        if self.user_role_id is not None and self.user_role_track_id is not None:
+            return Role(
+                id=self.user_role_id,
+                track_id=self.user_role_track_id,
+                name=self.user_role_name or "",
+                description=self.user_role_description or "",
+                count=int(self.user_role_count or 0),
+            )
+        return Role(
+            id=_PARTICIPANT_FALLBACK_ROLE_ID,
+            track_id=self.event_first_track_id or _PARTICIPANT_FALLBACK_TRACK_ID,
+            name="PARTICIPANT",
+            description="",
+            count=0,
+        )
 
     def to_model(self) -> ParticipantEvent:
         return ParticipantEvent(
@@ -95,5 +120,5 @@ class ParticipantEventRow:
             total_places=self.total_places,
             current_participants=self.current_participants,
             tracks_count=self.tracks_count,
-            user_role=self.user_role,
+            user_role=self._user_role(),
         )
