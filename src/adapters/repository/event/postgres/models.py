@@ -90,7 +90,7 @@ class ParticipantEventRow:
     user_role_count: int | None
     event_first_track_id: uuid.UUID | None
 
-    def _user_role(self) -> Role:
+    def _user_role(self) -> Role | None:
         if self.user_role_id is not None and self.user_role_track_id is not None:
             return Role(
                 id=self.user_role_id,
@@ -99,13 +99,7 @@ class ParticipantEventRow:
                 description=self.user_role_description or "",
                 count=int(self.user_role_count or 0),
             )
-        return Role(
-            id=_PARTICIPANT_FALLBACK_ROLE_ID,
-            track_id=self.event_first_track_id or _PARTICIPANT_FALLBACK_TRACK_ID,
-            name="PARTICIPANT",
-            description="",
-            count=0,
-        )
+        return None
 
     def to_model(self) -> ParticipantEvent:
         return ParticipantEvent(

@@ -424,6 +424,7 @@ class TestGetParticipantEvents:
         assert data["items"][0]["total_places"] == event.total_places
         assert data["items"][0]["current_participants"] == event.current_participants
         assert data["items"][0]["tracks_count"] == event.tracks_count
+        assert event.user_role is not None
         assert data["items"][0]["user_role"] == {
             "id": str(event.user_role.id),
             "track_id": str(event.user_role.track_id),
