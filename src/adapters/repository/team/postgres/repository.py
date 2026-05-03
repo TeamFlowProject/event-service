@@ -14,11 +14,13 @@ from src.adapters.repository.errors import (
     TeamNotFoundError,
     ParticipantNotFoundError,
     TeamAlreadyExistsError,
-    EventNotFoundError,
 )
 from src.adapters.repository.team.postgres.queries import (
     CREATE_TEAM_QUERY,
     GET_TEAM_QUERY,
+    GET_TEAM_QUERY_BY_EVENT_ID,
+    GET_TEAM_QUERY_BY_USER_ID,
+    GET_USER_TEAM_IN_EVENT,
     UPDATE_TEAM_QUERY,
     DELETE_TEAM_QUERY,
     CHANGE_TEAM_STATUS_QUERY,
@@ -269,20 +271,13 @@ class TeamPostgresRepository:
 
     async def get_teams_by_event_id(self, event_id: uuid.UUID) -> list[Team]:
         async with self._pool.connection() as conn:
-            async with conn.cursor() as cursor:
-                await cursor.execute(
-                    "SELECT 1 FROM events WHERE id = %s", (str(event_id),)
-                )
-                if not await cursor.fetchone():
-                    raise EventNotFoundError(f"Event {event_id} not found")
             async with conn.cursor(
                 row_factory=psycopg.rows.class_row(TeamRow)
             ) as cursor:
                 await cursor.execute(
-                    "SELECT * FROM teams WHERE event_id = %s", (str(event_id),)
+                    GET_TEAM_QUERY_BY_EVENT_ID, {"event_id": str(event_id)}
                 )
                 rows = await cursor.fetchall()
-
                 teams = []
                 for row in rows:
                     owner = await self._get_participant(
@@ -296,30 +291,13 @@ class TeamPostgresRepository:
 
     async def get_teams_by_user_id(self, user_id: uuid.UUID) -> list[Team]:
         async with self._pool.connection() as conn:
-            async with conn.cursor() as cursor:
-                await cursor.execute(
-                    "SELECT 1 FROM participants WHERE id = %s", (str(user_id),)
-                )
-                if not await cursor.fetchone():
-                    raise ParticipantNotFoundError(f"User {user_id} not found")
             async with conn.cursor(
                 row_factory=psycopg.rows.class_row(TeamRow)
             ) as cursor:
                 await cursor.execute(
-                    """
-                    SELECT DISTINCT t.*
-                    FROM teams t
-                    WHERE t.owner_id = %s
-                    OR t.id IN (
-                        SELECT tm.team_id
-                        FROM team_members tm
-                        WHERE tm.member_id = %s
-                    )
-                    """,
-                    (str(user_id), str(user_id)),
+                    GET_TEAM_QUERY_BY_USER_ID, {"user_id": str(user_id)}
                 )
                 rows = await cursor.fetchall()
-
                 teams = []
                 for row in rows:
                     owner = await self._get_participant(
@@ -335,35 +313,12 @@ class TeamPostgresRepository:
         self, user_id: uuid.UUID, event_id: uuid.UUID
     ) -> Team | None:
         async with self._pool.connection() as conn:
-            async with conn.cursor() as cursor:
-                await cursor.execute(
-                    "SELECT 1 FROM events WHERE id = %s", (str(event_id),)
-                )
-                if not await cursor.fetchone():
-                    raise EventNotFoundError(f"Event {event_id} not found")
-            async with conn.cursor() as cursor:
-                await cursor.execute(
-                    "SELECT 1 FROM participants WHERE id = %s", (str(user_id),)
-                )
-                if not await cursor.fetchone():
-                    raise ParticipantNotFoundError(f"User {user_id} not found")
             async with conn.cursor(
                 row_factory=psycopg.rows.class_row(TeamRow)
             ) as cursor:
                 await cursor.execute(
-                    """
-                    SELECT DISTINCT t.*
-                    FROM teams t
-                    WHERE t.event_id = %s
-                    AND (t.owner_id = %s
-                        OR t.id IN (
-                            SELECT tm.team_id
-                            FROM team_members tm
-                            WHERE tm.member_id = %s
-                        ))
-                    LIMIT 1
-                    """,
-                    (str(event_id), str(user_id), str(user_id)),
+                    GET_USER_TEAM_IN_EVENT,
+                    {"event_id": str(event_id), "user_id": str(user_id)},
                 )
                 row = await cursor.fetchone()
 
