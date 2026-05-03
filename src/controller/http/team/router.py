@@ -41,8 +41,8 @@ def create_team_router(team_service: TeamService) -> APIRouter:
                 description=team.description,
                 track_id=team.track_id,
                 event_id=team.event_id,
-                owner_id=team.owner.id,
-                member_ids=[member.id for member in team.members],
+                owner=team.owner,
+                members=[member for member in team.members],
                 required_roles=team.required_roles,
                 status=team.status,
                 created_at=team.created_at,
@@ -63,8 +63,8 @@ def create_team_router(team_service: TeamService) -> APIRouter:
                         description=team.description,
                         track_id=team.track_id,
                         event_id=team.event_id,
-                        owner_id=team.owner.id,
-                        member_ids=[member.id for member in team.members],
+                        owner=team.owner,
+                        members=team.members,
                         required_roles=team.required_roles,
                         status=team.status,
                         created_at=team.created_at,
@@ -88,8 +88,8 @@ def create_team_router(team_service: TeamService) -> APIRouter:
                         description=team.description,
                         track_id=team.track_id,
                         event_id=team.event_id,
-                        owner_id=team.owner.id,
-                        member_ids=[member.id for member in team.members],
+                        owner=team.owner,
+                        members=team.members,
                         required_roles=team.required_roles,
                         status=team.status,
                         created_at=team.created_at,
@@ -115,8 +115,8 @@ def create_team_router(team_service: TeamService) -> APIRouter:
                 description=team.description,
                 track_id=team.track_id,
                 event_id=team.event_id,
-                owner_id=team.owner.id,
-                member_ids=[member.id for member in team.members],
+                owner=team.owner,
+                members=team.members,
                 required_roles=team.required_roles,
                 status=team.status,
                 created_at=team.created_at,
@@ -167,6 +167,10 @@ def create_team_router(team_service: TeamService) -> APIRouter:
             return {"id": str(created_id)}
         except TeamNotFoundError:
             raise HTTPException(404, "Team not found")
+        except EventNotFoundError:
+            raise HTTPException(404, "Event not found")
+        except ParticipantNotFoundError:
+            raise HTTPException(404, "Owner not found")
 
     @router.put("/teams/{team_id}", status_code=status.HTTP_204_NO_CONTENT)
     async def put_teams(team_id: uuid.UUID, request: UpdateTeamRequest):

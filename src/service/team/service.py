@@ -139,47 +139,38 @@ class TeamService:
 
     async def get_teams_by_event_id(self, event_id: uuid.UUID) -> list[Team]:
         try:
-            all_teams = await self._team_repository.get_all_teams()
-            teams = [team for team in all_teams if team.event_id == event_id]
-
+            teams = await self._team_repository.get_teams_by_event_id(event_id)
             if not teams:
-                raise service_errors.EventNotFoundError(
-                    f"No teams found for event {event_id}"
-                )
-
+                raise service_errors.EventNotFoundError(f"Event {event_id} not found")
             return teams
-        except adapter_errors.EventNotFoundError:
-            raise service_errors.EventNotFoundError(f"Event {event_id} not found")
+        except adapter_errors.EventNotFoundError as e:
+            raise service_errors.EventNotFoundError(
+                f"Event {event_id} not found"
+            ) from e
 
     async def get_teams_by_user(self, user_id: uuid.UUID) -> list[Team]:
         try:
-            all_teams = await self._team_repository.get_all_teams()
-            result = []
-            for team in all_teams:
-                if team.owner.id == user_id:
-                    result.append(team)
-                elif any(member.id == user_id for member in team.members):
-                    result.append(team)
-            return result
-        except adapter_errors.ParticipantNotFoundError:
-            raise service_errors.EventNotFoundError(f"Event {user_id} not found")
+            teams = await self._team_repository.get_teams_by_user_id(user_id)
+            if not teams:
+                raise service_errors.ParticipantNotFoundError(
+                    f"User {user_id} not found"
+                )
+            return teams
+        except adapter_errors.ParticipantNotFoundError as e:
+            raise service_errors.ParticipantNotFoundError(
+                f"User {user_id} not found"
+            ) from e
 
     async def get_user_team_in_event(
         self, user_id: uuid.UUID, event_id: uuid.UUID
     ) -> Team | None:
         try:
-            all_teams = await self._team_repository.get_all_teams()
-            event_teams = [team for team in all_teams if team.event_id == event_id]
-            if not event_teams:
-                raise service_errors.EventNotFoundError(f"Event {event_id} not found")
-
-            for team in event_teams:
-                if team.owner.id == user_id:
-                    return team
-                if any(member.id == user_id for member in team.members):
-                    return team
-            return None
-        except adapter_errors.EventNotFoundError:
-            raise service_errors.EventNotFoundError(f"Event {event_id} not found")
-        except adapter_errors.ParticipantNotFoundError:
-            raise service_errors.EventNotFoundError(f"Event {user_id} not found")
+            return await self._team_repository.get_user_team_in_event(user_id, event_id)
+        except adapter_errors.EventNotFoundError as e:
+            raise service_errors.EventNotFoundError(
+                f"Event {event_id} not found"
+            ) from e
+        except adapter_errors.ParticipantNotFoundError as e:
+            raise service_errors.ParticipantNotFoundError(
+                f"User {user_id} not found"
+            ) from e

@@ -14,6 +14,7 @@ from src.adapters.repository.errors import (
     TeamNotFoundError,
     ParticipantNotFoundError,
     TeamAlreadyExistsError,
+    EventNotFoundError,
 )
 from src.adapters.repository.team.postgres.queries import (
     CREATE_TEAM_QUERY,
@@ -266,12 +267,20 @@ class TeamPostgresRepository:
             rows = await cursor.fetchall()
             return [row.to_model() for row in rows]
 
-    async def get_all_teams(self) -> list[Team]:
+    async def get_teams_by_event_id(self, event_id: uuid.UUID) -> list[Team]:
         async with self._pool.connection() as conn:
+            async with conn.cursor() as cursor:
+                await cursor.execute(
+                    "SELECT 1 FROM events WHERE id = %s", (str(event_id),)
+                )
+                if not await cursor.fetchone():
+                    raise EventNotFoundError(f"Event {event_id} not found")
             async with conn.cursor(
                 row_factory=psycopg.rows.class_row(TeamRow)
             ) as cursor:
-                await cursor.execute("SELECT * FROM teams")
+                await cursor.execute(
+                    "SELECT * FROM teams WHERE event_id = %s", (str(event_id),)
+                )
                 rows = await cursor.fetchall()
 
                 teams = []
@@ -284,3 +293,84 @@ class TeamPostgresRepository:
                     teams.append(row.to_model(owner, members, required_roles))
 
                 return teams
+
+    async def get_teams_by_user_id(self, user_id: uuid.UUID) -> list[Team]:
+        async with self._pool.connection() as conn:
+            async with conn.cursor() as cursor:
+                await cursor.execute(
+                    "SELECT 1 FROM participants WHERE id = %s", (str(user_id),)
+                )
+                if not await cursor.fetchone():
+                    raise ParticipantNotFoundError(f"User {user_id} not found")
+            async with conn.cursor(
+                row_factory=psycopg.rows.class_row(TeamRow)
+            ) as cursor:
+                await cursor.execute(
+                    """
+                    SELECT DISTINCT t.*
+                    FROM teams t
+                    WHERE t.owner_id = %s
+                    OR t.id IN (
+                        SELECT tm.team_id
+                        FROM team_members tm
+                        WHERE tm.member_id = %s
+                    )
+                    """,
+                    (str(user_id), str(user_id)),
+                )
+                rows = await cursor.fetchall()
+
+                teams = []
+                for row in rows:
+                    owner = await self._get_participant(
+                        conn, row.owner_id, row.event_id
+                    )
+                    members = await self._get_team_members(conn, row.id, row.event_id)
+                    required_roles = await self._get_team_roles(conn, row.id)
+                    teams.append(row.to_model(owner, members, required_roles))
+
+                return teams
+
+    async def get_user_team_in_event(
+        self, user_id: uuid.UUID, event_id: uuid.UUID
+    ) -> Team | None:
+        async with self._pool.connection() as conn:
+            async with conn.cursor() as cursor:
+                await cursor.execute(
+                    "SELECT 1 FROM events WHERE id = %s", (str(event_id),)
+                )
+                if not await cursor.fetchone():
+                    raise EventNotFoundError(f"Event {event_id} not found")
+            async with conn.cursor() as cursor:
+                await cursor.execute(
+                    "SELECT 1 FROM participants WHERE id = %s", (str(user_id),)
+                )
+                if not await cursor.fetchone():
+                    raise ParticipantNotFoundError(f"User {user_id} not found")
+            async with conn.cursor(
+                row_factory=psycopg.rows.class_row(TeamRow)
+            ) as cursor:
+                await cursor.execute(
+                    """
+                    SELECT DISTINCT t.*
+                    FROM teams t
+                    WHERE t.event_id = %s
+                    AND (t.owner_id = %s
+                        OR t.id IN (
+                            SELECT tm.team_id
+                            FROM team_members tm
+                            WHERE tm.member_id = %s
+                        ))
+                    LIMIT 1
+                    """,
+                    (str(event_id), str(user_id), str(user_id)),
+                )
+                row = await cursor.fetchone()
+
+                if not row:
+                    return None
+
+                owner = await self._get_participant(conn, row.owner_id, row.event_id)
+                members = await self._get_team_members(conn, row.id, row.event_id)
+                required_roles = await self._get_team_roles(conn, row.id)
+                return row.to_model(owner, members, required_roles)

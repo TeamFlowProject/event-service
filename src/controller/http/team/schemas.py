@@ -5,12 +5,13 @@ from pydantic import BaseModel, Field
 
 from src.models.team import TeamStatusEnum
 from src.models.track import Role
+from src.models.event import Participant
 
 
 class CreateTeamRequest(BaseModel):
     track_id: uuid.UUID
     event_id: uuid.UUID
-    owner_id: uuid.UUID
+    owner: Participant
     name: str = Field(..., min_length=1, max_length=100)
     description: str = Field(default="", max_length=500)
 
@@ -27,8 +28,8 @@ class GetTeamResponse(BaseModel):
     description: str
     track_id: uuid.UUID
     event_id: uuid.UUID
-    owner_id: uuid.UUID
-    member_ids: list[uuid.UUID]
+    owner: Participant
+    members: list[Participant]
     required_roles: list[Role]
     status: TeamStatusEnum
     created_at: datetime
