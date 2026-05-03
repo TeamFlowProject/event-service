@@ -1,6 +1,5 @@
 import uuid
 from datetime import datetime
-from uuid_extensions import uuid7
 from fastapi import APIRouter, HTTPException, Query, status
 
 from src.controller.http.team.schemas import (
@@ -142,7 +141,7 @@ def create_team_router(team_service: TeamService) -> APIRouter:
     @router.post("/teams", response_model=dict, status_code=status.HTTP_201_CREATED)
     async def post_teams(request: CreateTeamRequest):
         try:
-            team_id = uuid.UUID(uuid7())
+            team_id = uuid.UUID()
             owner = Participant(
                 id=request.owner.id,
                 event_id=request.event_id,
