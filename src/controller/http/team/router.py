@@ -144,7 +144,7 @@ def create_team_router(team_service: TeamService) -> APIRouter:
         try:
             team_id = uuid.UUID(uuid7())
             owner = Participant(
-                id=request.owner_id,
+                id=request.owner.id,
                 event_id=request.event_id,
                 name="",
                 surname="",
