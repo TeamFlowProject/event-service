@@ -1,4 +1,4 @@
-from prometeus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
+from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
 from fastapi import Request, Response
 
 # HTTP metrics for middleware

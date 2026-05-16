@@ -1,5 +1,5 @@
 from opentelemetry import trace
-from opentelemetry.sdk.trace import TraceProvider
+from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
 from opentelemetry.sdk.resources import Resource, SERVICE_NAME
@@ -23,7 +23,7 @@ def setup_tracing(
         insecure=True,  # !!! no TLS for local development
     )
 
-    provider = TraceProvider(resource=resource)
+    provider = TracerProvider(resource=resource)
     provider.add_span_processor(BatchSpanProcessor(exporter))
 
     # Global registration for trace.get_tracer() to return this provider everywhere

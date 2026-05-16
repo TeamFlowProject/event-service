@@ -91,8 +91,8 @@ class EventService:
             EventCreationError: If the event could not be created
         """
         with tracer.start_as_current_span("event_service.create_event") as span:
-            event_id = event["id"]
-            event_type = event.get("type", "unknown")
+            event_id = event.id
+            event_type = event.type
 
             span.set_attribute("event.id", str(event_id))
             span.set_attribute("event.type", str(event_type))
