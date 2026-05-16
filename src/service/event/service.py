@@ -1,9 +1,14 @@
+from loguru import logger
+from opentelemetry import trace
+from src.core.metrics import EVENTS_CREATED_TOTAL, EVENTS_CREATION_ERRORS_TOTAL
 from typing import Optional
 from src.service.event.protocols import EventRepository, KafkaProducer
 from src.models.event import Event, EventStatusEnum, Participant, ParticipantEvent
 import src.adapters.repository.errors as adapter_errors
 import src.service.errors as service_errors
 import uuid
+
+tracer = trace.get_tracer(__name__)
 
 
 class EventService:
@@ -31,7 +36,8 @@ class EventService:
         try:
             return await self._event_repository.get_event_by_id(event_id)
         except adapter_errors.EventNotFoundError as e:
-            raise service_errors.EventNotFoundError("Failed to get event") from e
+            raise service_errors.EventNotFoundError(
+                "Failed to get event") from e
 
     async def get_events_page(
         self,
@@ -84,10 +90,49 @@ class EventService:
         Raises:
             EventCreationError: If the event could not be created
         """
-        await self._event_repository.create_event(event)
-        await self._kafka_producer.send_create_event(event)
+        with tracer.start_as_current_span("event_service.create_event") as span:
+            event_id = event["id"]
+            event_type = event.get("type", "unknown")
 
-        return event.id
+            span.set_attribute("event.id", str(event_id))
+            span.set_attribute("event.type", str(event_type))
+
+            logger.info(
+                "service_creating_event",
+                event_id=str(event_id),
+                event_type=str(event_type)
+            )
+
+            try:
+                await self._event_repository.create_event(event)
+
+                await self._kafka_producer.send_create_event(event)
+
+                EVENTS_CREATED_TOTAL.labels(
+                    event_type=str(event_type)
+                ).inc()
+
+                logger.info(
+                    "service_event_created",
+                    event_id=str(event_id),
+                )
+
+                return event.id
+            except Exception as e:
+                EVENTS_CREATION_ERRORS_TOTAL.labels(
+                    error_type=type(e).__name__
+                ).inc()
+
+                span.record_exception(e)
+                span.set_status(trace.StatusCode.ERROR, str(e))
+
+                logger.error(
+                    "service_event_creation_failed",
+                    event_id=str(event_id),
+                    error=str(e),
+                    error_type=type(e).__name__,
+                )
+                raise
 
     async def update_event(self, event: Event) -> None:
         """
@@ -105,7 +150,8 @@ class EventService:
             await self._event_repository.update_event(event)
             await self._kafka_producer.send_update_event(event)
         except adapter_errors.EventNotFoundError as e:
-            raise service_errors.EventNotFoundError("Failed to update event") from e
+            raise service_errors.EventNotFoundError(
+                "Failed to update event") from e
 
     async def delete_event(self, event_id: uuid.UUID) -> None:
         """
@@ -122,7 +168,8 @@ class EventService:
             await self._event_repository.delete_event(event_id)
             await self._kafka_producer.send_delete_event(event)
         except adapter_errors.EventNotFoundError as e:
-            raise service_errors.EventNotFoundError("Failed to delete event") from e
+            raise service_errors.EventNotFoundError(
+                "Failed to delete event") from e
 
     async def add_participant(
         self, event_id: uuid.UUID, participant: Participant
@@ -144,7 +191,8 @@ class EventService:
             await self._event_repository.add_participant(event_id, participant)
             await self._kafka_producer.send_participant(event, participant.id)
         else:
-            raise service_errors.ParticipantError("Failed to add participant") from None
+            raise service_errors.ParticipantError(
+                "Failed to add participant") from None
 
     async def get_participants(
         self,
@@ -193,7 +241,8 @@ class EventService:
             ) from None
 
         except adapter_errors.EventNotFoundError as e:
-            raise service_errors.EventNotFoundError("Failed to get participant") from e
+            raise service_errors.EventNotFoundError(
+                "Failed to get participant") from e
         except adapter_errors.ParticipantNotFoundError as e:
             raise service_errors.ParticipantNotFoundError(
                 "Failed to get participant"
@@ -228,6 +277,8 @@ class EventService:
             ) from None
 
         except adapter_errors.EventNotFoundError as e:
-            raise service_errors.EventNotFoundError("Failed to get event") from e
+            raise service_errors.EventNotFoundError(
+                "Failed to get event") from e
         except adapter_errors.ParticipantNotFoundError as e:
-            raise service_errors.ParticipantNotFoundError("Failed to get events") from e
+            raise service_errors.ParticipantNotFoundError(
+                "Failed to get events") from e

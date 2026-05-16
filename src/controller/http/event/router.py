@@ -2,7 +2,8 @@ import uuid
 from typing import Optional, cast
 from datetime import datetime
 from uuid_extensions import uuid7
-
+from loguru import logger
+from opentelemetry import trace
 from fastapi import APIRouter, HTTPException
 
 from src.controller.http.event.schemas import (
@@ -28,6 +29,8 @@ from src.service.errors import (
     ParticipantNotFoundError,
 )
 
+tracer = trace.get_tracer(__name__)
+
 
 def create_event_router(event_service: EventService) -> APIRouter:
     router = APIRouter(prefix="/api/v1", tags=["event"])
@@ -35,6 +38,18 @@ def create_event_router(event_service: EventService) -> APIRouter:
     @router.post("/events", response_model=CreatedResourceResponse, status_code=201)
     async def create_event(request: CreateEventRequest):
         event_id = cast(uuid.UUID, uuid7())
+
+        logger.info(
+            "creating_event",
+            event_id=str(event_id),
+            event_name=request.name,
+            event_type=request.type,
+        )
+
+        current_span = trace.get_current_span()
+        current_span.set_attribute("event.id", str(event_id))
+        current_span.set_attribute("event.type", str(request.type))
+
         event = EventModel(
             id=event_id,
             name=request.name,
@@ -50,7 +65,19 @@ def create_event_router(event_service: EventService) -> APIRouter:
             faq=request.faq,
             status=EventStatusEnum.DRAFT,
         )
-        created_id = await event_service.create_event(event)
+        try:
+            created_id = await event_service.create_event(event)
+        except Exception as e:
+            logger.error(
+                "event_creation_failed",
+                event_id=str(event_id),
+                error=str(e),
+            )
+            current_span.record_exception(e)
+            current_span.set_status(trace.StatusCode.ERROR, str(e))
+            raise HTTPException(
+                status_code=500, detail="Failed to create event")
+        logger.info("event_created_successfully", event_id=str(created_id))
         return CreatedResourceResponse(id=created_id)
 
     @router.get("/events/{event_id}", response_model=EventResponse)
@@ -213,7 +240,8 @@ def create_event_router(event_service: EventService) -> APIRouter:
         except EventNotFoundError:
             raise HTTPException(status_code=404, detail="Event not found")
         except ParticipantNotFoundError:
-            raise HTTPException(status_code=404, detail="Participant not found")
+            raise HTTPException(
+                status_code=404, detail="Participant not found")
         except PaginationError as exc:
             raise HTTPException(status_code=400, detail=str(exc))
 
@@ -240,7 +268,8 @@ def create_event_router(event_service: EventService) -> APIRouter:
         except PaginationError as exc:
             raise HTTPException(status_code=400, detail=str(exc))
         except ParticipantNotFoundError:
-            raise HTTPException(status_code=404, detail="Participant not found")
+            raise HTTPException(
+                status_code=404, detail="Participant not found")
         except EventNotFoundError:
             raise HTTPException(status_code=404, detail="Event not found")
 

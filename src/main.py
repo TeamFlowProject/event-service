@@ -14,11 +14,33 @@ app = typer.Typer()
 
 def _setup_logger(settings: Settings) -> None:
     logger.remove()
-    logger.add(
-        sink=sys.stderr,
-        level=settings.log_level.upper(),
-        format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level:<8}</level> | <cyan>{name}</cyan>:<cyan>{line}</cyan> - {message}",
-    )
+    if settings.log_json:
+        import json
+
+        def _json_sink(message) -> None:
+            record = message.record
+            print(
+                json.dumps(
+                    {
+                        "time": record["time"].isoformat(),
+                        "level": record["level"].name,
+                        "name": record["name"],
+                        "line": record["line"],
+                        "message": record["message"],
+                        **record["extra"],
+                    },
+                    default=str,
+                ),
+                flush=True,
+            )
+
+        logger.add(_json_sink, level=settings.log_level.upper())
+    else:
+        logger.add(
+            sink=sys.stderr,
+            level=settings.log_level.upper(),
+            format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level:<8}</level> | <cyan>{name}</cyan>:<cyan>{line}</cyan> - {message}",
+        )
 
 
 @app.command()

@@ -1,10 +1,17 @@
 from datetime import datetime, timezone
 from typing import Optional
+from loguru import logger
+from opentelemetry import trace
 import uuid
+import time
 import psycopg.rows
 import psycopg_pool
+from psycopg import Error
+from psycopg.errors import UniqueViolation
 
-from src.adapters.repository.errors import EventNotFoundError
+from src.core.metrics import DB_QUERY_DURATION_SECONDS
+import src.adapters.repository.errors as adapter_error
+from src.adapters.repository.tracing import trace_db_operation
 from src.adapters.repository.event.postgres.models import (
     EventRow,
     ParticipantEventRow,
@@ -27,38 +34,54 @@ from src.adapters.repository.event.postgres.queries import (
 from src.models import Event
 from src.models.event import Participant, ParticipantEvent
 
+tracer = trace.get_tracer(__name__)
+
 
 class EventPostgresRepository:
     def __init__(self, pool: psycopg_pool.AsyncConnectionPool) -> None:
         self._pool = pool
 
+    def _event_to_dict_conversion(self, event: Event) -> dict:
+        return {
+            "id": str(event.id),
+            "name": event.name,
+            "description": event.description,
+            "type": event.type,
+            "registration_start": event.registration_start,
+            "registration_end": event.registration_end,
+            "holding_start": event.holding_start,
+            "holding_end": event.holding_end,
+            "created_at": event.created_at,
+            "organizers": event.organizers,
+            "rules": event.rules,
+            "faq": event.faq,
+            "status": event.status,
+        }
+
+    @trace_db_operation("INSERT", "event")
     async def create_event(self, event: Event) -> None:
         """
         Create a new event
         Args:
             event (Event): The event to create
         """
+        logger.debug(
+            "db_event_creation_started",
+            event_id=str(event.id),
+        )
 
-        async with self._pool.connection() as conn:
-            async with conn.cursor() as cursor:
-                await cursor.execute(
-                    CREATE_EVENT_QUERY,
-                    {
-                        "id": str(event.id),
-                        "name": event.name,
-                        "description": event.description,
-                        "type": event.type,
-                        "registration_start": event.registration_start,
-                        "registration_end": event.registration_end,
-                        "holding_start": event.holding_start,
-                        "holding_end": event.holding_end,
-                        "created_at": event.created_at,
-                        "organizers": event.organizers,
-                        "rules": event.rules,
-                        "faq": event.faq,
-                        "status": event.status,
-                    },
-                )
+        try:
+            async with self._pool.connection() as conn:
+                async with conn.cursor() as cursor:
+                    await cursor.execute(
+                        CREATE_EVENT_QUERY,
+                        self._event_to_dict_conversion(event),
+                    )
+
+        except UniqueViolation as e:
+            raise adapter_error.EventAlreadyExistsError from e
+        except Error as e:
+            raise adapter_error.RepositoryError from e
 
     async def update_event(self, event: Event) -> None:
         """
@@ -88,7 +111,8 @@ class EventPostgresRepository:
                 )
                 row = await cursor.fetchone()
                 if row is None:
-                    raise EventNotFoundError(f"Event with id {event.id} not found")
+                    raise EventNotFoundError(
+                        f"Event with id {event.id} not found")
 
     async def delete_event(self, event_id: uuid.UUID) -> None:
         """
@@ -102,7 +126,8 @@ class EventPostgresRepository:
                 await cursor.execute(DELETE_EVENT_QUERY, {"id": str(event_id)})
                 row = await cursor.fetchone()
                 if row is None:
-                    raise EventNotFoundError(f"Event with id {event_id} not found")
+                    raise EventNotFoundError(
+                        f"Event with id {event_id} not found")
 
     async def get_event_by_id(self, event_id: uuid.UUID) -> Event:
         """
@@ -121,7 +146,8 @@ class EventPostgresRepository:
                 await cursor.execute(SELECT_EVENT_QUERY, {"id": str(event_id)})
                 row = await cursor.fetchone()
                 if row is None:
-                    raise EventNotFoundError(f"Event with id {event_id} not found")
+                    raise EventNotFoundError(
+                        f"Event with id {event_id} not found")
 
                 return row.to_model()
 
@@ -141,7 +167,8 @@ class EventPostgresRepository:
                 row_factory=psycopg.rows.class_row(EventRow)
             ) as cursor:
                 await cursor.execute(
-                    SELECT_EVENTS_QUERY_BY_ID, {"id": str(event_id), "limit": limit}
+                    SELECT_EVENTS_QUERY_BY_ID, {
+                        "id": str(event_id), "limit": limit}
                 )
                 rows = await cursor.fetchall()
 
@@ -169,7 +196,8 @@ class EventPostgresRepository:
                 row_factory=psycopg.rows.class_row(EventRow)
             ) as cursor:
                 await cursor.execute(
-                    SELECT_EVENTS_QUERY_BY_NUM, {"offset": offset, "limit": limit}
+                    SELECT_EVENTS_QUERY_BY_NUM, {
+                        "offset": offset, "limit": limit}
                 )
                 rows = await cursor.fetchall()
 
@@ -266,7 +294,8 @@ class EventPostgresRepository:
             ) as cursor:
                 await cursor.execute(
                     SELECT_PARTICIPANTS_QUERY_BY_NUM,
-                    {"event_id": str(event_id), "offset": offset, "limit": limit},
+                    {"event_id": str(event_id),
+                     "offset": offset, "limit": limit},
                 )
                 rows = await cursor.fetchall()
 
