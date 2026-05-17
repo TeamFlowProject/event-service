@@ -1,0 +1,66 @@
+import uuid
+from typing import Protocol
+
+from src.models.invitation import Invitation, JoinRequest
+
+
+class InvitationRepository(Protocol):
+    async def create_invitation(self, invitation: Invitation) -> None: ...
+
+    async def get_invitation(self, invitation_id: uuid.UUID) -> Invitation: ...
+
+    async def get_invitations_by_team(
+        self, team_id: uuid.UUID
+    ) -> list[Invitation]: ...
+
+    async def get_invitations_by_member(
+        self, member_id: uuid.UUID
+    ) -> list[Invitation]: ...
+
+    async def delete_invitation(self, invitation_id: uuid.UUID) -> None: ...
+
+    async def accept_invitation(
+        self, invitation_id: uuid.UUID
+    ) -> Invitation: ...
+
+    async def create_join_request(self, join_request: JoinRequest) -> None: ...
+
+    async def get_join_request(
+        self, join_request_id: uuid.UUID
+    ) -> JoinRequest: ...
+
+    async def get_join_requests_by_track_and_member(
+        self, track_id: uuid.UUID, member_id: uuid.UUID
+    ) -> list[JoinRequest]: ...
+
+    async def delete_join_request(self, join_request_id: uuid.UUID) -> None: ...
+
+    async def accept_join_request(
+        self, join_request_id: uuid.UUID
+    ) -> JoinRequest: ...
+
+
+class KafkaProducer(Protocol):
+    async def send_invitation_created(self, invitation: Invitation) -> None: ...
+
+    async def send_invitation_canceled(self, invitation: Invitation) -> None: ...
+
+    async def send_invitation_accepted(self, invitation: Invitation) -> None: ...
+
+    async def send_invitation_rejected(self, invitation: Invitation) -> None: ...
+
+    async def send_join_request_created(
+        self, join_request: JoinRequest
+    ) -> None: ...
+
+    async def send_join_request_canceled(
+        self, join_request: JoinRequest
+    ) -> None: ...
+
+    async def send_join_request_accepted(
+        self, join_request: JoinRequest
+    ) -> None: ...
+
+    async def send_join_request_rejected(
+        self, join_request: JoinRequest
+    ) -> None: ...
