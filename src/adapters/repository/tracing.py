@@ -3,6 +3,16 @@ from functools import wraps
 from loguru import logger
 from opentelemetry import trace
 from src.core.metrics import DB_QUERY_DURATION_SECONDS
+from psycopg import Error as PsycopgError
+import src.adapters.repository.errors as adapter_errors
+
+EXPECTED_EXCEPTIONS = (
+    adapter_errors.EventNotFoundError,
+    adapter_errors.EventAlreadyExistsError,
+    adapter_errors.ParticipantNotFoundError,
+    adapter_errors.ParticipantAlreadyExistsError,
+    adapter_errors.RepositoryError,
+)
 tracer = trace.get_tracer(__name__)
 
 
@@ -44,13 +54,21 @@ def trace_db_operation(service: str, operation: str, table: str):
                     span.record_exception(e)
                     span.set_status(trace.StatusCode.ERROR, str(e))
 
-                    logger.exception(
-                        "db_query_failed",
-                        operation=operation,
-                        table=table,
-                        duration_ms=round(duration * 1000, 2),
-                        error_type=type(e).__name__,
-                    )
+                    if not isinstance(e, EXPECTED_EXCEPTIONS):
+                        logger.error(
+                            "db_query_failed",
+                            operation=operation,
+                            table=table,
+                            duration_ms=round(duration * 1000, 2),
+                            error_type=type(e).__name__,
+                        )
+                    else:
+                        logger.debug(
+                            "db_query_business_error",
+                            operation=operation,
+                            table=table,
+                            error_type=type(e).__name__,
+                        )
 
                     raise
         return wrapper
