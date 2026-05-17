@@ -1,8 +1,10 @@
 import uuid
 from datetime import datetime, timezone
+from typing import cast
 
 import pytest
 import pytest_asyncio
+from uuid_extensions import uuid7
 
 from src.adapters.repository.errors import TrackNotFoundError, EventNotFoundError
 from src.adapters.repository.event.postgres.repository import EventPostgresRepository
@@ -13,7 +15,7 @@ from src.models.track import Role, Track, TrackStatusEnum
 @pytest_asyncio.fixture
 async def event_id(pool):
     event = Event(
-        id=uuid.uuid4(),
+        id=cast(uuid.UUID, uuid7()),
         name="Test Event",
         description="Test Description",
         type=EventTypeEnum.HACKATHON,
@@ -41,7 +43,7 @@ async def cleanup(pool):
 
 
 def _make_track(event_id: uuid.UUID) -> Track:
-    track_id = uuid.uuid4()
+    track_id = cast(uuid.UUID, uuid7())
     return Track(
         id=track_id,
         event_id=event_id,
@@ -53,14 +55,14 @@ def _make_track(event_id: uuid.UUID) -> Track:
         max_team_size=5,
         required_roles=[
             Role(
-                id=uuid.uuid4(),
+                id=cast(uuid.UUID, uuid7()),
                 track_id=track_id,
                 name="Developer",
                 description="Backend developer",
                 count=3,
             ),
             Role(
-                id=uuid.uuid4(),
+                id=cast(uuid.UUID, uuid7()),
                 track_id=track_id,
                 name="Designer",
                 description="UI/UX designer",
@@ -97,7 +99,7 @@ class TestTrackPostgresRepository:
     @pytest.mark.asyncio
     async def test_get_track_not_found(self, track_repository):
         with pytest.raises(TrackNotFoundError):
-            await track_repository.get_track(uuid.uuid4())
+            await track_repository.get_track(cast(uuid.UUID, uuid7()))
 
     @pytest.mark.asyncio
     async def test_update_track(self, track_repository, event_id):
@@ -136,7 +138,7 @@ class TestTrackPostgresRepository:
     @pytest.mark.asyncio
     async def test_delete_track_not_found(self, track_repository):
         with pytest.raises(TrackNotFoundError):
-            await track_repository.delete_track(uuid.uuid4())
+            await track_repository.delete_track(cast(uuid.UUID, uuid7()))
 
     @pytest.mark.asyncio
     async def test_get_tracks_by_event_id(self, track_repository, event_id):
@@ -158,14 +160,16 @@ class TestTrackPostgresRepository:
 
     @pytest.mark.asyncio
     async def test_get_tracks_by_event_id_empty(self, track_repository):
-        results = await track_repository.get_tracks_by_event_id(uuid.uuid4())
+        results = await track_repository.get_tracks_by_event_id(
+            cast(uuid.UUID, uuid7())
+        )
         assert results == []
 
     @pytest.mark.asyncio
     async def test_create_track_raises_event_not_found_for_unknown_event(
         self, track_repository
     ):
-        track = _make_track(uuid.uuid4())
+        track = _make_track(cast(uuid.UUID, uuid7()))
 
         with pytest.raises(EventNotFoundError):
             await track_repository.create_track(track)

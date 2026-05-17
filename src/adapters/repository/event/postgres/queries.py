@@ -13,8 +13,8 @@ CREATE_EVENT_QUERY = """
         rules,
         faq,
         status
-    ) 
-    VALUES 
+    )
+    VALUES
     (
         %(id)s,
         %(name)s,
@@ -172,4 +172,109 @@ SELECT_PARTICIPANTS_QUERY_BY_ID = """
       AND ep.event_id = %(event_id)s
     ORDER BY p.id DESC
     LIMIT %(limit)s
+"""
+SELECT_PARTICIPANT_EVENTS_QUERY_BY_ID = """
+    SELECT
+        e.id,
+        e.name,
+        e.description,
+        e.registration_start,
+        e.registration_end,
+        e.holding_start,
+        e.holding_end,
+        e.status,
+        COALESCE((
+            SELECT SUM(t.max_participants_count)::int
+            FROM tracks t
+            WHERE t.event_id = e.id
+        ), 0) AS total_places,
+        (
+            SELECT COUNT(*)::int
+            FROM event_participants ep2
+            WHERE ep2.event_id = e.id
+        ) AS current_participants,
+        (
+            SELECT COUNT(*)::int
+            FROM tracks t2
+            WHERE t2.event_id = e.id
+        ) AS tracks_count,
+        ur.id AS user_role_id,
+        ur.track_id AS user_role_track_id,
+        ur.name AS user_role_name,
+        ur.description AS user_role_description,
+        ur.count::int AS user_role_count,
+        (
+            SELECT t.id
+            FROM tracks t
+            WHERE t.event_id = e.id
+            ORDER BY t.id
+            LIMIT 1
+        ) AS event_first_track_id
+    FROM events e
+    INNER JOIN event_participants ep ON ep.event_id = e.id
+    LEFT JOIN LATERAL (
+        SELECT r.id, r.track_id, r.name, r.description, r.count
+        FROM team_members tm
+        INNER JOIN teams t3 ON t3.id = tm.team_id
+        INNER JOIN roles r ON r.id = tm.role_id
+        WHERE tm.member_id = ep.participant_id
+          AND t3.event_id = e.id
+        LIMIT 1
+    ) ur ON TRUE
+    WHERE ep.participant_id = %(participant_id)s
+      AND e.id < %(event_id)s
+    ORDER BY e.id DESC
+    LIMIT %(limit)s
+"""
+SELECT_PARTICIPANT_EVENTS_QUERY_BY_NUM = """
+    SELECT
+        e.id,
+        e.name,
+        e.description,
+        e.registration_start,
+        e.registration_end,
+        e.holding_start,
+        e.holding_end,
+        e.status,
+        COALESCE((
+            SELECT SUM(t.max_participants_count)::int
+            FROM tracks t
+            WHERE t.event_id = e.id
+        ), 0) AS total_places,
+        (
+            SELECT COUNT(*)::int
+            FROM event_participants ep2
+            WHERE ep2.event_id = e.id
+        ) AS current_participants,
+        (
+            SELECT COUNT(*)::int
+            FROM tracks t2
+            WHERE t2.event_id = e.id
+        ) AS tracks_count,
+        ur.id AS user_role_id,
+        ur.track_id AS user_role_track_id,
+        ur.name AS user_role_name,
+        ur.description AS user_role_description,
+        ur.count::int AS user_role_count,
+        (
+            SELECT t.id
+            FROM tracks t
+            WHERE t.event_id = e.id
+            ORDER BY t.id
+            LIMIT 1
+        ) AS event_first_track_id
+    FROM events e
+    INNER JOIN event_participants ep ON ep.event_id = e.id
+    LEFT JOIN LATERAL (
+        SELECT r.id, r.track_id, r.name, r.description, r.count
+        FROM team_members tm
+        INNER JOIN teams t3 ON t3.id = tm.team_id
+        INNER JOIN roles r ON r.id = tm.role_id
+        WHERE tm.member_id = ep.participant_id
+          AND t3.event_id = e.id
+        LIMIT 1
+    ) ur ON TRUE
+    WHERE ep.participant_id = %(participant_id)s
+    ORDER BY e.id DESC
+    OFFSET %(offset)s LIMIT %(limit)s
 """

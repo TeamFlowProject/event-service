@@ -11,7 +11,9 @@ from migrations.migrate import up
 from src.adapters.clients.kafka_producer import KafkaProducerClient, dto_serializer
 from src.adapters.repository.track.postgres.repository import TrackPostgresRepository
 from src.adapters.repository.event.postgres.repository import EventPostgresRepository
+from src.controller.http.event.router import create_event_router
 from src.controller.http.track.router import create_track_router
+from src.service.event.service import EventService
 from src.service.track.service import TrackService
 
 
@@ -72,8 +74,14 @@ async def event_repository(pool):
 
 
 @pytest_asyncio.fixture
-async def http_client(track_service):
+async def event_service(event_repository, kafka_producer_client):
+    return EventService(event_repository, kafka_producer_client)
+
+
+@pytest_asyncio.fixture
+async def http_client(track_service, event_service):
     app = FastAPI()
+    app.include_router(create_event_router(event_service))
     app.include_router(create_track_router(track_service))
     async with AsyncClient(
         transport=ASGITransport(app=app), base_url="http://test"

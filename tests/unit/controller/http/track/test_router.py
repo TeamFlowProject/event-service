@@ -1,6 +1,8 @@
 import uuid
 from datetime import datetime
+from typing import cast
 from unittest.mock import AsyncMock
+from uuid_extensions import uuid7
 
 import pytest
 from fastapi import FastAPI
@@ -12,10 +14,10 @@ from src.service.errors import EventNotFoundError, TrackNotFoundError
 
 
 def make_track(**kwargs) -> TrackModel:
-    track_id = uuid.uuid4()
+    track_id = cast(uuid.UUID, uuid7())
     defaults = dict(
         id=track_id,
-        event_id=uuid.uuid4(),
+        event_id=cast(uuid.UUID, uuid7()),
         name="Test Track",
         description="A test track description",
         max_team_count=10,
@@ -24,7 +26,7 @@ def make_track(**kwargs) -> TrackModel:
         max_team_size=5,
         required_roles=[
             RoleModel(
-                id=uuid.uuid4(),
+                id=cast(uuid.UUID, uuid7()),
                 track_id=track_id,
                 name="Developer",
                 description="A developer role",
@@ -41,7 +43,7 @@ def make_track(**kwargs) -> TrackModel:
 
 def make_create_payload(**kwargs) -> dict:
     defaults = dict(
-        event_id=str(uuid.uuid4()),
+        event_id=str(cast(uuid.UUID, uuid7())),
         name="Test Track",
         description="A test track description",
         max_team_count=10,
@@ -75,7 +77,7 @@ def client(service):
 class TestCreateTrack:
     @pytest.mark.asyncio
     async def test_returns_201_with_id(self, client, service):
-        track_id = uuid.uuid4()
+        track_id = cast(uuid.UUID, uuid7())
         service.create_track.return_value = track_id
 
         async with client as c:
@@ -86,7 +88,7 @@ class TestCreateTrack:
 
     @pytest.mark.asyncio
     async def test_calls_service(self, client, service):
-        service.create_track.return_value = uuid.uuid4()
+        service.create_track.return_value = cast(uuid.UUID, uuid7())
 
         async with client as c:
             await c.post("/api/v1/track", json=make_create_payload())
@@ -145,7 +147,7 @@ class TestGetTrack:
         service.get_track.side_effect = TrackNotFoundError
 
         async with client as c:
-            resp = await c.get(f"/api/v1/track/{uuid.uuid4()}")
+            resp = await c.get(f"/api/v1/track/{cast(uuid.UUID, uuid7())}")
 
         assert resp.status_code == 404
 
@@ -154,7 +156,7 @@ class TestGetTrack:
 class TestGetTracksByEventId:
     @pytest.mark.asyncio
     async def test_returns_tracks(self, client, service):
-        event_id = uuid.uuid4()
+        event_id = cast(uuid.UUID, uuid7())
         tracks = [make_track(event_id=event_id), make_track(event_id=event_id)]
         service.get_tracks_by_event_id.return_value = tracks
 
@@ -171,7 +173,7 @@ class TestGetTracksByEventId:
         service.get_tracks_by_event_id.return_value = []
 
         async with client as c:
-            resp = await c.get(f"/api/v1/event/{uuid.uuid4()}/tracks")
+            resp = await c.get(f"/api/v1/event/{cast(uuid.UUID, uuid7())}/tracks")
 
         assert resp.status_code == 200
         assert resp.json() == []
@@ -181,7 +183,7 @@ class TestGetTracksByEventId:
         service.get_tracks_by_event_id.side_effect = EventNotFoundError
 
         async with client as c:
-            resp = await c.get(f"/api/v1/event/{uuid.uuid4()}/tracks")
+            resp = await c.get(f"/api/v1/event/{cast(uuid.UUID, uuid7())}/tracks")
 
         assert resp.status_code == 404
 
@@ -190,11 +192,11 @@ class TestGetTracksByEventId:
 class TestUpdateTrack:
     @pytest.mark.asyncio
     async def test_returns_204(self, client, service):
-        track_id = uuid.uuid4()
+        track_id = cast(uuid.UUID, uuid7())
         payload = make_create_payload()
         payload["required_roles"] = [
             {
-                "id": str(uuid.uuid4()),
+                "id": str(cast(uuid.UUID, uuid7())),
                 "name": "Developer",
                 "description": "A developer role",
                 "count": 3,
@@ -208,7 +210,7 @@ class TestUpdateTrack:
 
     @pytest.mark.asyncio
     async def test_calls_service(self, client, service):
-        track_id = uuid.uuid4()
+        track_id = cast(uuid.UUID, uuid7())
         payload = make_create_payload()
         payload["required_roles"] = [
             {"name": "Developer", "description": "A developer role", "count": 3}
@@ -228,7 +230,9 @@ class TestUpdateTrack:
         ]
 
         async with client as c:
-            resp = await c.put(f"/api/v1/track/{uuid.uuid4()}", json=payload)
+            resp = await c.put(
+                f"/api/v1/track/{cast(uuid.UUID, uuid7())}", json=payload
+            )
 
         assert resp.status_code == 404
 
@@ -238,13 +242,13 @@ class TestDeleteTrack:
     @pytest.mark.asyncio
     async def test_returns_204(self, client, service):
         async with client as c:
-            resp = await c.delete(f"/api/v1/track/{uuid.uuid4()}")
+            resp = await c.delete(f"/api/v1/track/{cast(uuid.UUID, uuid7())}")
 
         assert resp.status_code == 204
 
     @pytest.mark.asyncio
     async def test_calls_service(self, client, service):
-        track_id = uuid.uuid4()
+        track_id = cast(uuid.UUID, uuid7())
 
         async with client as c:
             await c.delete(f"/api/v1/track/{track_id}")
@@ -256,6 +260,6 @@ class TestDeleteTrack:
         service.delete_track.side_effect = TrackNotFoundError
 
         async with client as c:
-            resp = await c.delete(f"/api/v1/track/{uuid.uuid4()}")
+            resp = await c.delete(f"/api/v1/track/{cast(uuid.UUID, uuid7())}")
 
         assert resp.status_code == 404

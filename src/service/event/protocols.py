@@ -1,5 +1,5 @@
 from typing import Optional, Protocol
-from src.models.event import Event, Participant
+from src.models.event import Event, Participant, ParticipantEvent
 import uuid
 
 
@@ -23,12 +23,18 @@ class EventRepository(Protocol):
     async def get_participants_by_num(
         self, event_id: uuid.UUID, offset: int, limit: int
     ) -> tuple[list[Participant], Optional[uuid.UUID]]: ...
+    async def get_participant_events_by_num(
+        self, participant_id: uuid.UUID, offset: int, limit: int
+    ) -> tuple[list[ParticipantEvent], Optional[uuid.UUID]]: ...
+    async def get_participant_events_by_id(
+        self, participant_id: uuid.UUID, event_id: uuid.UUID, limit: int
+    ) -> tuple[list[ParticipantEvent], Optional[uuid.UUID]]: ...
 
 
 class KafkaProducer(Protocol):
     async def send_create_event(self, event: Event) -> None: ...
     async def send_update_event(self, event: Event) -> None: ...
-    async def send_delete_event(self, event_id: uuid.UUID) -> None: ...
+    async def send_delete_event(self, event: Event) -> None: ...
     async def send_participant(
         self, event: Event, participant_id: uuid.UUID
     ) -> None: ...

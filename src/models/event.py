@@ -4,6 +4,8 @@ from datetime import datetime
 from enum import Enum
 from typing import Optional
 
+from src.models.track import Role
+
 
 class EventStatusEnum(str, Enum):
     DRAFT = "DRAFT"
@@ -46,3 +48,19 @@ class Participant:
     patronymic: str
     have_team: bool
     role_id: Optional[uuid.UUID] = None
+
+
+@dataclass
+class ParticipantEvent:
+    id: uuid.UUID
+    name: str
+    description: str
+    status: EventStatusEnum
+    total_places: int
+    current_participants: int
+    tracks_count: int
+    registration_start: datetime
+    registration_end: datetime
+    holding_start: datetime
+    holding_end: datetime
+    user_role: Role | None

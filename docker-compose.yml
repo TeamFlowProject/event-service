@@ -1,0 +1,137 @@
+services:
+  event-service:
+    build: .
+    ports:
+      - "8001:8001"
+    environment:
+      - DATABASE_DSN=postgresql://user:password@postgres:5432/event_db
+      - KAFKA_BOOTSTRAP=redpanda:9092
+
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4317
+      - OTEL_SERVICE_NAME=event-service
+
+      - LOG_JSON=true
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redpanda:
+        condition: service_healthy
+      jaeger:
+        condition: service_started
+      prometheus:
+        condition: service_started
+    networks:
+      - backend
+
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: event_db
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d event_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - backend
+
+  redpanda:
+    image: redpandadata/redpanda:v24.1.1
+    command:
+      - redpanda
+      - start
+      - --kafka-addr internal://0.0.0.0:9092,external://0.0.0.0:19092
+      - --advertise-kafka-addr internal://redpanda:9092,external://localhost:19092
+      - --smp 1
+      - --memory 1024M
+      - --overprovisioned
+      - --default-log-level=warn
+    ports:
+      - "19092:19092"
+    healthcheck:
+      test: ["CMD-SHELL", "rpk cluster health | grep -q 'Healthy:.*true'"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+    networks:
+      - backend
+
+  redpanda-console:
+    image: redpandadata/console:v2.6.0
+    ports:
+      - "8080:8080"
+    environment:
+      - KAFKA_BROKERS=redpanda:9092
+    depends_on:
+      redpanda:
+        condition: service_healthy
+    networks:
+      - backend
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.57
+    ports:
+      - "16686:16686"
+      - "4317:4317"
+      - "4318:4318"
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    networks:
+      - backend
+
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./docker/prometheus.yml:/etc/prometheus/prometheus.yml
+    networks:
+      - backend
+
+  grafana:
+    image: grafana/grafana:10.4.0
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_LOG_LEVEL=warn
+    volumes:
+      - ./docker/grafana/provisioning:/etc/grafana/provisioning
+    depends_on:
+      - prometheus
+      - jaeger
+      - loki
+    networks:
+      - backend
+
+  loki:
+    image: grafana/loki:2.9.0
+    ports:
+      - "3100:3100"
+    networks:
+      - backend
+
+  promtail:
+    image: grafana/promtail:2.9.0
+    volumes:
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - ./docker/promtail.yml:/etc/promtail/config.yml
+    networks:
+      - backend
+    depends_on:
+      - loki
+      - event-service
+
+volumes:
+  postgres_data:
+
+networks:
+  backend:
+    driver: bridge
