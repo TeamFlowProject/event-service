@@ -1,9 +1,15 @@
 from typing import Optional
+from loguru import logger
+from opentelemetry import trace
+import uuid
+
+from src.service.tracing import trace_business_logic
 from src.service.event.protocols import EventRepository, KafkaProducer
 from src.models.event import Event, EventStatusEnum, Participant, ParticipantEvent
 import src.adapters.repository.errors as adapter_errors
 import src.service.errors as service_errors
-import uuid
+
+tracer = trace.get_tracer(__name__)
 
 
 class EventService:
@@ -15,137 +21,160 @@ class EventService:
         self._event_repository = event_repository
         self._kafka_producer = kafka_producer
 
+    @trace_business_logic("event_service")
     async def get_event_by_id(self, event_id: uuid.UUID) -> Event:
-        """
-        Get an event by ID
+        span = trace.get_current_span()
+        span.set_attribute("event.id", str(event_id))
 
-        Args:
-            event_id (uuid.UUID): The ID of the event to get
+        logger.info("service_receiving_event", event_id=str(event_id))
 
-        Returns:
-            Event: The event with the given ID
-
-        Raises:
-            EventNotFoundError: If the event could not be found
-        """
         try:
-            return await self._event_repository.get_event_by_id(event_id)
+            event = await self._event_repository.get_event_by_id(event_id)
+            logger.info("service_event_received", event_id=str(event_id))
+            return event
         except adapter_errors.EventNotFoundError as e:
-            raise service_errors.EventNotFoundError("Failed to get event") from e
+            raise service_errors.EventNotFoundError from e
 
+    @trace_business_logic("event_service")
     async def get_events_page(
         self,
         event_id: Optional[uuid.UUID] = None,
         offset: Optional[int] = None,
         limit: int = 10,
     ) -> tuple[list[Event], Optional[uuid.UUID]]:
-        """
-        Get events with pagination
+        span = trace.get_current_span()
+        span.set_attribute("pagination.limit", limit)
+        if event_id:
+            span.set_attribute("pagination.cursor_id", str(event_id))
+        if offset is not None:
+            span.set_attribute("pagination.offset", offset)
 
-        Supports two modes: get single event by ID or get list with offset pagination
+        logger.info(
+            "service_receiving_events_page",
+            event_id=str(event_id) if event_id else None,
+            offset=offset,
+            limit=limit,
+        )
 
-        Args:
-            event_id (Optional[uuid.UUID]): The ID of the event to get
-            offset (Optional[int]): Number of events to skip
-            limit (int): Maximum number of events to return
-
-        Returns:
-            tuple[list[Event], Optional[uuid.UUID]]: The events and cursor
-
-        Raises:
-            PaginationError: If both or neither of event_id and offset are specified
-        """
         if (event_id is not None) and (offset is not None):
             raise service_errors.PaginationError(
                 "Event id or offset must be specified"
             ) from None
 
-        if event_id:
-            return await self._event_repository.get_events_page_by_id(
-                event_id=event_id, limit=limit
-            )
-        if offset is not None:
-            return await self._event_repository.get_events_page_by_num(
-                offset=offset, limit=limit
-            )
+        try:
+            if event_id:
+                return await self._event_repository.get_events_page_by_id(
+                    event_id=event_id, limit=limit
+                )
+            if offset is not None:
+                return await self._event_repository.get_events_page_by_num(
+                    offset=offset, limit=limit
+                )
+        except adapter_errors.RepositoryError as e:
+            raise service_errors.EventRepositoryError from e
 
         raise service_errors.PaginationError("Offset or id must be specified")
 
+    @trace_business_logic("event_service")
     async def create_event(self, event: Event) -> uuid.UUID:
-        """
-        Create a new event
+        span = trace.get_current_span()
+        span.set_attribute("event.id", str(event.id))
+        span.set_attribute("event.type", str(event.type))
 
-        Args:
-            event (Event): The event to create
+        logger.info(
+            "service_creating_event",
+            event_id=str(event.id),
+            event_type=str(event.type),
+        )
 
-        Returns:
-            uuid.UUID: The ID of the created event
+        try:
+            await self._event_repository.create_event(event)
+            await self._kafka_producer.send_create_event(event)
+            logger.info("service_event_created", event_id=str(event.id))
+            return event.id
+        except adapter_errors.EventAlreadyExistsError as e:
+            raise service_errors.EventAlreadyExistsError from e
+        except adapter_errors.RepositoryError as e:
+            raise service_errors.EventRepositoryError from e
 
-        Raises:
-            EventCreationError: If the event could not be created
-        """
-        await self._event_repository.create_event(event)
-        await self._kafka_producer.send_create_event(event)
-
-        return event.id
-
+    @trace_business_logic("event_service")
     async def update_event(self, event: Event) -> None:
-        """
-        Update an existing event
+        span = trace.get_current_span()
+        span.set_attribute("event.id", str(event.id))
 
-        Updates full state of the event
+        logger.info("service_updating_event", event_id=str(event.id))
 
-        Args:
-            event (Event): The event to update
-
-        Raises:
-            EventNotFoundError: If the event could not be updated
-        """
         try:
             await self._event_repository.update_event(event)
             await self._kafka_producer.send_update_event(event)
+            logger.info("service_event_updated", event_id=str(event.id))
         except adapter_errors.EventNotFoundError as e:
-            raise service_errors.EventNotFoundError("Failed to update event") from e
+            raise service_errors.EventNotFoundError from e
+        except adapter_errors.RepositoryError as e:
+            raise service_errors.EventRepositoryError from e
 
+    @trace_business_logic("event_service")
     async def delete_event(self, event_id: uuid.UUID) -> None:
-        """
-        Delete an existing event
+        span = trace.get_current_span()
+        span.set_attribute("event.id", str(event_id))
 
-        Args:
-            event_id (uuid.UUID): The ID of the event to delete
+        logger.info("service_deleting_event", event_id=str(event_id))
 
-        Raises:
-            EventNotFoundError: If the event could not be deleted
-        """
         try:
             event = await self._event_repository.get_event_by_id(event_id)
             await self._event_repository.delete_event(event_id)
             await self._kafka_producer.send_delete_event(event)
+            logger.info("service_event_deleted", event_id=str(event_id))
         except adapter_errors.EventNotFoundError as e:
-            raise service_errors.EventNotFoundError("Failed to delete event") from e
+            raise service_errors.EventNotFoundError from e
+        except adapter_errors.RepositoryError as e:
+            raise service_errors.EventRepositoryError from e
 
+    @trace_business_logic("event_service")
     async def add_participant(
         self, event_id: uuid.UUID, participant: Participant
     ) -> None:
-        """
-        Add a participant to an event
+        span = trace.get_current_span()
+        span.set_attribute("event.id", str(event_id))
+        span.set_attribute("participant.id", str(participant.id))
 
-        Args:
-            event_id (uuid.UUID): The ID of the event to add participant to
-            participant (Participant): The participant to add
+        logger.info(
+            "service_adding_participant",
+            event_id=str(event_id),
+            participant_id=str(participant.id),
+        )
 
-        Raises:
-            EventNotFoundError: If the event could not be found
-            ParticipantError: If the participant could not be added (event not OPEN)
-        """
-        event = await self.get_event_by_id(event_id)
+        try:
+            event = await self._event_repository.get_event_by_id(event_id)
+        except adapter_errors.EventNotFoundError as e:
+            raise service_errors.EventNotFoundError from e
 
-        if event.status == EventStatusEnum.OPEN:
+        if event.status != EventStatusEnum.OPEN:
+            logger.warning(
+                "service_event_not_open",
+                event_id=str(event_id),
+                status=str(event.status),
+            )
+            raise service_errors.ParticipantError(
+                "Failed to add participant: event is not open"
+            )
+
+        try:
             await self._event_repository.add_participant(event_id, participant)
             await self._kafka_producer.send_participant(event, participant.id)
-        else:
-            raise service_errors.ParticipantError("Failed to add participant") from None
+            logger.info(
+                "service_participant_added",
+                event_id=str(event_id),
+                participant_id=str(participant.id),
+            )
+        except adapter_errors.ParticipantAlreadyExistsError as e:
+            raise service_errors.ParticipantError(
+                "Participant already registered"
+            ) from e
+        except adapter_errors.RepositoryError as e:
+            raise service_errors.EventRepositoryError from e
 
+    @trace_business_logic("event_service")
     async def get_participants(
         self,
         event_id: uuid.UUID,
@@ -153,27 +182,22 @@ class EventService:
         participant_id: Optional[uuid.UUID] = None,
         limit: int = 10,
     ) -> tuple[list[Participant], Optional[uuid.UUID]]:
-        """
-        Get participants for an event
+        span = trace.get_current_span()
+        span.set_attribute("event.id", str(event_id))
+        span.set_attribute("pagination.limit", limit)
+        if participant_id:
+            span.set_attribute("pagination.cursor_id", str(participant_id))
+        if offset is not None:
+            span.set_attribute("pagination.offset", offset)
 
-        Supports two modes:
-        - Get participant by ID (returns list with single participant)
-        - Get list of participants with offset pagination
+        logger.info(
+            "service_receiving_participants",
+            event_id=str(event_id),
+            participant_id=str(participant_id) if participant_id else None,
+            offset=offset,
+            limit=limit,
+        )
 
-        Args:
-            event_id (uuid.UUID): The ID of the event to get participants for
-            offset (Optional[int]): Number of participants to skip (for pagination mode)
-            participant_id (Optional[uuid.UUID]): The ID of the participant to get (for single lookup)
-            limit (int): Maximum number of participants to return
-
-        Returns:
-            list[Participant]: List of participants (single item in ID mode, multiple in pagination mode)
-
-        Raises:
-            PaginationError: If both or neither of participant_id and offset are specified
-            EventNotFoundError: If the event could not be found
-            ParticipantNotFoundError: If the participant could not be found
-        """
         if (participant_id is not None) and (offset is not None):
             raise service_errors.PaginationError(
                 "Participant id or offset must be specified"
@@ -188,17 +212,18 @@ class EventService:
                 return await self._event_repository.get_participants_by_num(
                     event_id, offset, limit
                 )
-            raise service_errors.PaginationError(
-                "Participant id or offset must be specified"
-            ) from None
-
         except adapter_errors.EventNotFoundError as e:
-            raise service_errors.EventNotFoundError("Failed to get participant") from e
+            raise service_errors.EventNotFoundError from e
         except adapter_errors.ParticipantNotFoundError as e:
-            raise service_errors.ParticipantNotFoundError(
-                "Failed to get participant"
-            ) from e
+            raise service_errors.ParticipantNotFoundError from e
+        except adapter_errors.RepositoryError as e:
+            raise service_errors.EventRepositoryError from e
 
+        raise service_errors.PaginationError(
+            "Participant id or offset must be specified"
+        )
+
+    @trace_business_logic("event_service")
     async def get_participant_events(
         self,
         participant_id: uuid.UUID,
@@ -206,9 +231,22 @@ class EventService:
         event_id: Optional[uuid.UUID] = None,
         limit: int = 10,
     ) -> tuple[list[ParticipantEvent], Optional[uuid.UUID]]:
-        """
-        Get events for participant
-        """
+        span = trace.get_current_span()
+        span.set_attribute("participant.id", str(participant_id))
+        span.set_attribute("pagination.limit", limit)
+        if event_id:
+            span.set_attribute("pagination.cursor_id", str(event_id))
+        if offset is not None:
+            span.set_attribute("pagination.offset", offset)
+
+        logger.info(
+            "service_receiving_participant_events",
+            participant_id=str(participant_id),
+            event_id=str(event_id) if event_id else None,
+            offset=offset,
+            limit=limit,
+        )
+
         if (event_id is not None) and (offset is not None):
             raise service_errors.PaginationError(
                 "Event id or offset must be specified"
@@ -223,11 +261,11 @@ class EventService:
                 return await self._event_repository.get_participant_events_by_num(
                     participant_id, offset, limit
                 )
-            raise service_errors.PaginationError(
-                "Event id or offset must be specified"
-            ) from None
-
         except adapter_errors.EventNotFoundError as e:
-            raise service_errors.EventNotFoundError("Failed to get event") from e
+            raise service_errors.EventNotFoundError from e
         except adapter_errors.ParticipantNotFoundError as e:
-            raise service_errors.ParticipantNotFoundError("Failed to get events") from e
+            raise service_errors.ParticipantNotFoundError from e
+        except adapter_errors.RepositoryError as e:
+            raise service_errors.EventRepositoryError from e
+
+        raise service_errors.PaginationError("Event id or offset must be specified")
