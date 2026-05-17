@@ -22,6 +22,10 @@ class ParticipantNotFoundError(Exception):
     ...
 
 
+class ParticipantAlreadyExistsError(Exception):
+    ...
+
+
 class TeamNotFoundError(Exception):
     ...
 

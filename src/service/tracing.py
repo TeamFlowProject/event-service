@@ -2,8 +2,10 @@ from loguru import logger
 from functools import wraps
 from opentelemetry import trace
 from src.core.metrics import BUSINESS_OPERATION_ERRORS_TOTAL, BUSINESS_OPERATIONS_TOTAL
+from src.service.errors import EventError, TrackError, TeamError
 
 tracer = trace.get_tracer(__name__)
+BUSINESS_EXCEPTIONS = (EventError, TrackError, TeamError)
 
 
 def trace_business_logic(service: str):
@@ -37,11 +39,12 @@ def trace_business_logic(service: str):
                     span.record_exception(e)
                     span.set_status(trace.StatusCode.ERROR, str(e))
 
-                    logger.exception(
-                        f"service_{func.__name__}_failed",
-                        error=str(e),
-                        error_type=type(e).__name__,
-                    )
+                    if not isinstance(e, BUSINESS_EXCEPTIONS):
+                        logger.error(
+                            f"service_{func.__name__}_failed",
+                            error=str(e),
+                            error_type=type(e).__name__,
+                        )
                     raise
         return wrapper
     return decorator
