@@ -23,13 +23,7 @@ from loguru import logger
 from opentelemetry import trace, propagate
 import uuid
 
-from src.models import Event
-from src.models.track import Track
-from pydantic import BaseModel
 from src.adapters.clients.topics import (
-    TRACK_CREATED,
-    TRACK_UPDATED,
-    TRACK_DELETED,
     INVITATION_CREATED,
     INVITATION_CANCELED,
     INVITATION_ACCEPTED,
@@ -39,7 +33,6 @@ from src.adapters.clients.topics import (
     JOIN_REQUEST_ACCEPTED,
     JOIN_REQUEST_REJECTED,
 )
-from src.adapters.clients.dto.track import TrackCreated, TrackUpdated, TrackDeleted
 from src.adapters.clients.dto.invitation import (
     InvitationCreated,
     InvitationCanceled,
@@ -51,6 +44,7 @@ from src.adapters.clients.dto.invitation import (
     JoinRequestRejected,
 )
 from src.models.invitation import Invitation, JoinRequest
+
 tracer = trace.get_tracer(__name__)
 
 
@@ -145,7 +139,6 @@ class KafkaProducerClient:
             value=AddParticipant.from_model(event, participant_id),
             headers=self._build_headers(),
         )
-
 
     async def send_invitation_created(self, invitation: Invitation) -> None:
         await self._producer.send_and_wait(

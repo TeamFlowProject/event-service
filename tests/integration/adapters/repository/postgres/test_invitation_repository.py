@@ -196,9 +196,7 @@ def _make_join_request(
 @pytest.mark.usefixtures("cleanup")
 class TestInvitations:
     @pytest.mark.asyncio
-    async def test_create_and_get(
-        self, invitation_repository, team, owner, member
-    ):
+    async def test_create_and_get(self, invitation_repository, team, owner, member):
         invitation = _make_invitation(team, owner, member)
 
         await invitation_repository.create_invitation(invitation)
@@ -217,9 +215,7 @@ class TestInvitations:
             await invitation_repository.get_invitation(uuid.uuid4())
 
     @pytest.mark.asyncio
-    async def test_duplicate_raises(
-        self, invitation_repository, team, owner, member
-    ):
+    async def test_duplicate_raises(self, invitation_repository, team, owner, member):
         invitation = _make_invitation(team, owner, member)
         await invitation_repository.create_invitation(invitation)
 
@@ -278,9 +274,7 @@ class TestInvitations:
         assert member_ids == {member.id, other.id}
 
     @pytest.mark.asyncio
-    async def test_delete_invitation(
-        self, invitation_repository, team, owner, member
-    ):
+    async def test_delete_invitation(self, invitation_repository, team, owner, member):
         invitation = _make_invitation(team, owner, member)
         await invitation_repository.create_invitation(invitation)
 
@@ -409,9 +403,7 @@ class TestInvitations:
 @pytest.mark.usefixtures("cleanup")
 class TestJoinRequests:
     @pytest.mark.asyncio
-    async def test_create_and_get(
-        self, invitation_repository, team, owner, member
-    ):
+    async def test_create_and_get(self, invitation_repository, team, owner, member):
         jr = _make_join_request(team, owner, member)
 
         await invitation_repository.create_join_request(jr)
@@ -428,9 +420,7 @@ class TestJoinRequests:
             await invitation_repository.get_join_request(uuid.uuid4())
 
     @pytest.mark.asyncio
-    async def test_duplicate_raises(
-        self, invitation_repository, team, owner, member
-    ):
+    async def test_duplicate_raises(self, invitation_repository, team, owner, member):
         jr = _make_join_request(team, owner, member)
         await invitation_repository.create_join_request(jr)
 
@@ -453,9 +443,7 @@ class TestJoinRequests:
         assert result[0].id == jr.id
 
     @pytest.mark.asyncio
-    async def test_get_by_track_and_member_empty(
-        self, invitation_repository, track
-    ):
+    async def test_get_by_track_and_member_empty(self, invitation_repository, track):
         result = await invitation_repository.get_join_requests_by_track_and_member(
             track.id, uuid.uuid4()
         )
