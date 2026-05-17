@@ -1,8 +1,9 @@
 from loguru import logger
 from opentelemetry import trace
-from src.core.metrics import EVENTS_CREATED_TOTAL, EVENTS_CREATION_ERRORS_TOTAL
+from src.core.metrics import BUSINESS_OPERATION_ERRORS_TOTAL, BUSINESS_OPERATIONS_TOTAL
 from typing import Optional
 from src.service.event.protocols import EventRepository, KafkaProducer
+from src.service.tracing import trace_business_logic
 from src.models.event import Event, EventStatusEnum, Participant, ParticipantEvent
 import src.adapters.repository.errors as adapter_errors
 import src.service.errors as service_errors
@@ -77,6 +78,7 @@ class EventService:
 
         raise service_errors.PaginationError("Offset or id must be specified")
 
+    @trace_business_logic("event_service")
     async def create_event(self, event: Event) -> uuid.UUID:
         """
         Create a new event
@@ -90,49 +92,28 @@ class EventService:
         Raises:
             EventCreationError: If the event could not be created
         """
-        with tracer.start_as_current_span("event_service.create_event") as span:
-            event_id = event.id
-            event_type = event.type
+        span = trace.get_current_span()
+        span.set_attribute("event.id", str(event.id))
+        span.set_attribute("event.type", str(event.type))
 
-            span.set_attribute("event.id", str(event_id))
-            span.set_attribute("event.type", str(event_type))
+        logger.info(
+            "service_creating_event",
+            event_id=str(event.id),
+            event_type=str(event.type)
+        )
 
-            logger.info(
-                "service_creating_event",
-                event_id=str(event_id),
-                event_type=str(event_type)
-            )
+        try:
+            await self._event_repository.create_event(event)
 
-            try:
-                await self._event_repository.create_event(event)
+            await self._kafka_producer.send_create_event(event)
 
-                await self._kafka_producer.send_create_event(event)
+            logger.info("service_event_created", event_id=str(event.id))
+            return event.id
 
-                EVENTS_CREATED_TOTAL.labels(
-                    event_type=str(event_type)
-                ).inc()
-
-                logger.info(
-                    "service_event_created",
-                    event_id=str(event_id),
-                )
-
-                return event.id
-            except Exception as e:
-                EVENTS_CREATION_ERRORS_TOTAL.labels(
-                    error_type=type(e).__name__
-                ).inc()
-
-                span.record_exception(e)
-                span.set_status(trace.StatusCode.ERROR, str(e))
-
-                logger.error(
-                    "service_event_creation_failed",
-                    event_id=str(event_id),
-                    error=str(e),
-                    error_type=type(e).__name__,
-                )
-                raise
+        except adapter_errors.EventAlreadyExistsError as e:
+            raise service_errors.EventAlreadyExistsError from e
+        except adapter_errors.RepositoryError as e:
+            raise service_errors.EventRepositoryError from e
 
     async def update_event(self, event: Event) -> None:
         """

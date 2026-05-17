@@ -6,7 +6,7 @@ from src.core.metrics import KAFKA_MESSAGES_SENT_TOTAL
 tracer = trace.get_tracer(__name__)
 
 
-def trace_kafka_producer(topic: str):
+def trace_kafka_producer(service: str, topic: str):
     def decorator(func):
         @wraps(func)
         async def wrapper(*args, **kwargs):
@@ -22,6 +22,7 @@ def trace_kafka_producer(topic: str):
                     result = await func(*args, **kwargs)
 
                     KAFKA_MESSAGES_SENT_TOTAL.labels(
+                        service=service,
                         topic=topic,
                         status="success",
                     ).inc()
@@ -34,6 +35,7 @@ def trace_kafka_producer(topic: str):
 
                 except Exception as e:
                     KAFKA_MESSAGES_SENT_TOTAL.labels(
+                        service=service,
                         topic=topic,
                         status="error",
                     ).inc()

@@ -51,7 +51,7 @@ class KafkaProducerClient:
             value=TrackDeleted.from_model(track),
         )
 
-    @trace_kafka_producer(EVENT_CREATED)
+    @trace_kafka_producer("event_service", EVENT_CREATED)
     async def send_create_event(self, event: Event) -> None:
         logger.info(
             "sending_event_created",

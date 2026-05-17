@@ -16,30 +16,29 @@ HTTP_REQUEST_DURATION_SECONDS = Histogram(
 )
 
 # Business metrics
-EVENTS_CREATED_TOTAL = Counter(
-    name="events_created_total",
-    documentation="Количество созданных событий",
-    labelnames=["event_type"],
+BUSINESS_OPERATIONS_TOTAL = Counter(
+    name="business_operations_total",
+    documentation="Количество бизнес-операций",
+    labelnames=["service", "operation", "status"],  # status: success / error
 )
 
-EVENTS_CREATION_ERRORS_TOTAL = Counter(
-    name="events_creation_errors_total",
-    documentation="Количество ошибок при создании событий",
-    labelnames=["error_type"],
+BUSINESS_OPERATION_ERRORS_TOTAL = Counter(
+    name="business_operation_errors_total",
+    documentation="Количество ошибок бизнес-операций",
+    labelnames=["service", "operation", "error_type"],
 )
-
 # Infrastructure metrics
 DB_QUERY_DURATION_SECONDS = Histogram(
     name="db_query_duration_seconds",
     documentation="Время выполнения запросов к базе данных",
-    labelnames=["operation", "table"],
+    labelnames=["service", "operation", "table"],
     buckets=[0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1.0],
 )
 
 KAFKA_MESSAGES_SENT_TOTAL = Counter(
     name="kafka_messages_sent_total",
     documentation="Количество отправленных сообщений в Kafka",
-    labelnames=["topic", "status"],  # status: success / error
+    labelnames=["service", "topic", "status"],  # status: success / error
 )
 
 

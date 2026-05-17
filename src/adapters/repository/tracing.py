@@ -6,12 +6,12 @@ from src.core.metrics import DB_QUERY_DURATION_SECONDS
 tracer = trace.get_tracer(__name__)
 
 
-def trace_db_operation(operation: str, table: str):
+def trace_db_operation(service: str, operation: str, table: str):
     def decorator(func):
         @wraps(func)
         async def wrapper(*args, **kwargs):
             with tracer.start_as_current_span(
-                f"db.{operation.lower}.{table}"
+                f"db.{operation.lower()}.{table}"
             ) as span:
                 span.set_attribute("db.system", "postgresql")
                 span.set_attribute("db.operation", operation)
@@ -25,6 +25,7 @@ def trace_db_operation(operation: str, table: str):
                     duration = time.perf_counter() - start
 
                     DB_QUERY_DURATION_SECONDS.labels(
+                        service=service,
                         operation=operation,
                         table=table
                     ).observe(duration)

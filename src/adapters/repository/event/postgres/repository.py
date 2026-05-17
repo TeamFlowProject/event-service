@@ -58,17 +58,14 @@ class EventPostgresRepository:
             "status": event.status,
         }
 
-    @trace_db_operation("INSERT", "event")
+    @trace_db_operation("event_service", "INSERT", "event")
     async def create_event(self, event: Event) -> None:
         """
         Create a new event
         Args:
             event (Event): The event to create
         """
-        logger.debug(
-            "db_event_creation_started",
-            event_id=str(event.id),
-        )
+        logger.debug("db_event_creation_started", event_id=str(event.id),)
 
         try:
             async with self._pool.connection() as conn:
