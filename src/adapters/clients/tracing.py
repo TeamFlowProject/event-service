@@ -1,6 +1,6 @@
 from loguru import logger
 from functools import wraps
-from opentelemetry import trace, propagate
+from opentelemetry import trace
 from opentelemetry.trace import SpanKind
 from src.core.metrics import KAFKA_MESSAGES_SENT_TOTAL
 tracer = trace.get_tracer(__name__)

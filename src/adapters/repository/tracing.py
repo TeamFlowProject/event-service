@@ -3,7 +3,6 @@ from functools import wraps
 from loguru import logger
 from opentelemetry import trace
 from src.core.metrics import DB_QUERY_DURATION_SECONDS
-from psycopg import Error as PsycopgError
 import src.adapters.repository.errors as adapter_errors
 
 EXPECTED_EXCEPTIONS = (

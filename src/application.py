@@ -1,7 +1,4 @@
 import asyncio
-import os
-from contextlib import asynccontextmanager
-
 import psycopg_pool
 import uvicorn
 from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
