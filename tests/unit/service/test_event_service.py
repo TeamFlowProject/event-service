@@ -88,8 +88,7 @@ class TestGetEventsPage:
         result = await service.get_events_page(event_id=event_id, limit=10)
 
         assert result == ([event], None)
-        repo.get_events_page_by_id.assert_called_once_with(
-            event_id=event_id, limit=10)
+        repo.get_events_page_by_id.assert_called_once_with(event_id=event_id, limit=10)
 
     async def test_returns_events_by_offset(self, service, repo):
         events = [make_event(), make_event()]
@@ -106,9 +105,7 @@ class TestGetEventsPage:
 
     async def test_raises_pagination_error_when_both_specified(self, service):
         with pytest.raises(service_errors.PaginationError):
-            await service.get_events_page(
-                event_id=cast(uuid.UUID, uuid7()), offset=0
-            )
+            await service.get_events_page(event_id=cast(uuid.UUID, uuid7()), offset=0)
 
     async def test_raises_repository_error(self, service, repo):
         repo.get_events_page_by_num.side_effect = adapter_errors.RepositoryError
@@ -239,9 +236,7 @@ class TestAddParticipant:
         repo.get_event_by_id.side_effect = adapter_errors.EventNotFoundError
 
         with pytest.raises(service_errors.EventNotFoundError):
-            await service.add_participant(
-                cast(uuid.UUID, uuid7()), make_participant()
-            )
+            await service.add_participant(cast(uuid.UUID, uuid7()), make_participant())
 
         repo.add_participant.assert_not_called()
         kafka.send_participant.assert_not_called()
@@ -281,7 +276,8 @@ class TestGetParticipants:
 
         assert result == ([participant], None)
         repo.get_participants_by_id.assert_called_once_with(
-            event_id, participant_id, 10)
+            event_id, participant_id, 10
+        )
 
     async def test_returns_participants_by_offset(self, service, repo):
         event_id = cast(uuid.UUID, uuid7())
@@ -319,7 +315,9 @@ class TestGetParticipants:
             )
 
     async def test_raises_participant_not_found(self, service, repo):
-        repo.get_participants_by_id.side_effect = adapter_errors.ParticipantNotFoundError
+        repo.get_participants_by_id.side_effect = (
+            adapter_errors.ParticipantNotFoundError
+        )
 
         with pytest.raises(service_errors.ParticipantNotFoundError):
             await service.get_participants(
@@ -383,7 +381,9 @@ class TestGetParticipantEvents:
             )
 
     async def test_raises_event_not_found(self, service, repo):
-        repo.get_participant_events_by_id.side_effect = adapter_errors.EventNotFoundError
+        repo.get_participant_events_by_id.side_effect = (
+            adapter_errors.EventNotFoundError
+        )
 
         with pytest.raises(service_errors.EventNotFoundError):
             await service.get_participant_events(
@@ -392,7 +392,9 @@ class TestGetParticipantEvents:
             )
 
     async def test_raises_participant_not_found(self, service, repo):
-        repo.get_participant_events_by_id.side_effect = adapter_errors.ParticipantNotFoundError
+        repo.get_participant_events_by_id.side_effect = (
+            adapter_errors.ParticipantNotFoundError
+        )
 
         with pytest.raises(service_errors.ParticipantNotFoundError):
             await service.get_participant_events(

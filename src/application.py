@@ -94,8 +94,7 @@ async def run_application(settings: Settings) -> None:
         fastapi_app, host=settings.http_host, port=settings.http_port
     )
     server = uvicorn.Server(config)
-    logger.info("Starting service on {}:{}",
-                settings.http_host, settings.http_port)
+    logger.info("Starting service on {}:{}", settings.http_host, settings.http_port)
 
     try:
         await asyncio.gather(

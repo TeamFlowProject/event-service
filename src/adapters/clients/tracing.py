@@ -3,6 +3,7 @@ from functools import wraps
 from opentelemetry import trace
 from opentelemetry.trace import SpanKind
 from src.core.metrics import KAFKA_MESSAGES_SENT_TOTAL
+
 tracer = trace.get_tracer(__name__)
 
 
@@ -49,5 +50,7 @@ def trace_kafka_producer(service: str, topic: str):
                         error=str(e),
                     )
                     raise
+
         return wrapper
+
     return decorator

@@ -33,7 +33,7 @@ def trace_business_logic(service: str):
                     BUSINESS_OPERATION_ERRORS_TOTAL.labels(
                         service=service,
                         operation=func.__name__,
-                        error_type=type(e).__name__
+                        error_type=type(e).__name__,
                     ).inc()
 
                     span.record_exception(e)
@@ -46,5 +46,7 @@ def trace_business_logic(service: str):
                             error_type=type(e).__name__,
                         )
                     raise
+
         return wrapper
+
     return decorator

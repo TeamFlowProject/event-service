@@ -68,6 +68,7 @@ class ObservabilityMiddleware(BaseHTTPMiddleware):
         /api/v1/events  ->  /api/v1/events
         """
         import re
+
         uuid_pattern = re.compile(
             r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}",
             re.IGNORECASE,

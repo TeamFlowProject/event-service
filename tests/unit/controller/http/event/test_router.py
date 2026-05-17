@@ -284,8 +284,7 @@ class TestGetEvents:
         event_1 = make_event()
         event_2 = make_event()
         next_cursor = cast(uuid.UUID, uuid7())
-        service.get_events_page.return_value = (
-            [event_1, event_2], next_cursor)
+        service.get_events_page.return_value = ([event_1, event_2], next_cursor)
 
         async with client as c:
             resp = await c.get("/api/v1/events", params={"offset": 0, "limit": 2})
@@ -352,8 +351,7 @@ class TestCreateParticipant:
 
     async def test_returns_404_when_event_not_found(self, client, service):
         service.add_participant.side_effect = EventNotFoundError
-        payload = {"name": "Ivan", "surname": "Ivanov",
-                   "patronymic": "Ivanovich"}
+        payload = {"name": "Ivan", "surname": "Ivanov", "patronymic": "Ivanovich"}
 
         async with client as c:
             resp = await c.post(
@@ -363,10 +361,8 @@ class TestCreateParticipant:
         assert resp.status_code == 404
 
     async def test_returns_400_when_participant_error(self, client, service):
-        service.add_participant.side_effect = ParticipantError(
-            "event not open")
-        payload = {"name": "Ivan", "surname": "Ivanov",
-                   "patronymic": "Ivanovich"}
+        service.add_participant.side_effect = ParticipantError("event not open")
+        payload = {"name": "Ivan", "surname": "Ivanov", "patronymic": "Ivanovich"}
 
         async with client as c:
             resp = await c.post(
@@ -377,8 +373,7 @@ class TestCreateParticipant:
 
     async def test_returns_500_when_repository_error(self, client, service):
         service.add_participant.side_effect = EventRepositoryError
-        payload = {"name": "Ivan", "surname": "Ivanov",
-                   "patronymic": "Ivanovich"}
+        payload = {"name": "Ivan", "surname": "Ivanov", "patronymic": "Ivanovich"}
 
         async with client as c:
             resp = await c.post(
@@ -437,8 +432,7 @@ class TestGetParticipants:
         assert resp.status_code == 404
 
     async def test_returns_400_when_pagination_error(self, client, service):
-        service.get_participants.side_effect = PaginationError(
-            "bad pagination")
+        service.get_participants.side_effect = PaginationError("bad pagination")
 
         async with client as c:
             resp = await c.get(
@@ -509,8 +503,7 @@ class TestGetParticipantEvents:
         )
 
     async def test_returns_400_when_pagination_error(self, client, service):
-        service.get_participant_events.side_effect = PaginationError(
-            "bad pagination")
+        service.get_participant_events.side_effect = PaginationError("bad pagination")
 
         async with client as c:
             resp = await c.get(

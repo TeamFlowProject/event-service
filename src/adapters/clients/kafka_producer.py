@@ -22,6 +22,7 @@ from aiokafka import AIOKafkaProducer
 from loguru import logger
 from opentelemetry import trace, propagate
 import uuid
+
 tracer = trace.get_tracer(__name__)
 
 
@@ -67,7 +68,7 @@ class KafkaProducerClient:
         await self._producer.send_and_wait(
             topic=EVENT_CREATED,
             value=EventCreated.from_model(event),
-            headers=self._build_headers()
+            headers=self._build_headers(),
         )
 
     @trace_kafka_producer("event_service", EVENT_UPDATED)
@@ -81,7 +82,7 @@ class KafkaProducerClient:
         await self._producer.send_and_wait(
             topic=EVENT_UPDATED,
             value=EventUpdated.from_model(event),
-            headers=self._build_headers()
+            headers=self._build_headers(),
         )
 
     @trace_kafka_producer("event_service", EVENT_DELETED)
@@ -95,7 +96,7 @@ class KafkaProducerClient:
         await self._producer.send_and_wait(
             topic=EVENT_DELETED,
             value=EventDeleted.from_model(event),
-            headers=self._build_headers()
+            headers=self._build_headers(),
         )
 
     @trace_kafka_producer("event_service", ADD_PARTICIPANT)
@@ -114,5 +115,5 @@ class KafkaProducerClient:
         await self._producer.send_and_wait(
             topic=ADD_PARTICIPANT,
             value=AddParticipant.from_model(event, participant_id),
-            headers=self._build_headers()
+            headers=self._build_headers(),
         )

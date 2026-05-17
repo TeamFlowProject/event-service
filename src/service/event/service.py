@@ -268,6 +268,4 @@ class EventService:
         except adapter_errors.RepositoryError as e:
             raise service_errors.EventRepositoryError from e
 
-        raise service_errors.PaginationError(
-            "Event id or offset must be specified"
-        )
+        raise service_errors.PaginationError("Event id or offset must be specified")

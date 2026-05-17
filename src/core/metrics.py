@@ -50,7 +50,4 @@ async def metrics_endpoint(request: Request) -> Response:
     Returns:
         Response: Prometheus metrics in text format
     """
-    return Response(
-        content=generate_latest(),
-        media_type=CONTENT_TYPE_LATEST
-    )
+    return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)

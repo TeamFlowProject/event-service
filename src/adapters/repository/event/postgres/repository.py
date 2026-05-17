@@ -60,7 +60,10 @@ class EventPostgresRepository:
         Args:
             event (Event): The event to create
         """
-        logger.debug("db_event_creation_started", event_id=str(event.id),)
+        logger.debug(
+            "db_event_creation_started",
+            event_id=str(event.id),
+        )
 
         try:
             async with self._pool.connection() as conn:
@@ -82,7 +85,10 @@ class EventPostgresRepository:
         Args:
             event (Event): The event to update
         """
-        logger.debug("db_event_updating_started", event_id=str(event.id),)
+        logger.debug(
+            "db_event_updating_started",
+            event_id=str(event.id),
+        )
 
         try:
             async with self._pool.connection() as conn:
@@ -107,7 +113,8 @@ class EventPostgresRepository:
                     row = await cursor.fetchone()
                     if row is None:
                         raise adapter_error.EventNotFoundError(
-                            f"Event with id {event.id} not found")
+                            f"Event with id {event.id} not found"
+                        )
         except adapter_error.EventNotFoundError:
             raise
         except Error as e:
@@ -120,7 +127,10 @@ class EventPostgresRepository:
         Args:
             event_id (uuid.UUID): The event to delete
         """
-        logger.debug("db_event_deletion_started", event_id=str(event_id),)
+        logger.debug(
+            "db_event_deletion_started",
+            event_id=str(event_id),
+        )
 
         try:
             async with self._pool.connection() as conn:
@@ -129,7 +139,8 @@ class EventPostgresRepository:
                     row = await cursor.fetchone()
                     if row is None:
                         raise adapter_error.EventNotFoundError(
-                            f"Event with id {event_id} not found")
+                            f"Event with id {event_id} not found"
+                        )
         except adapter_error.EventNotFoundError:
             raise
         except Error as e:
@@ -146,7 +157,10 @@ class EventPostgresRepository:
         Returns:
             Event: The event with the given id
         """
-        logger.debug("db_event_selected_started", event_id=str(event_id),)
+        logger.debug(
+            "db_event_selected_started",
+            event_id=str(event_id),
+        )
 
         try:
             async with self._pool.connection() as conn:
@@ -157,7 +171,8 @@ class EventPostgresRepository:
                     row = await cursor.fetchone()
                     if row is None:
                         raise adapter_error.EventNotFoundError(
-                            f"Event with id {event_id} not found")
+                            f"Event with id {event_id} not found"
+                        )
 
                     return row.to_model()
         except adapter_error.EventNotFoundError:
@@ -177,7 +192,10 @@ class EventPostgresRepository:
         Returns:
             tuple[list[Event], Optional[uuid.UUID]]: The events page and cursor
         """
-        logger.debug("db_event_selection_started", event_id=str(event_id),)
+        logger.debug(
+            "db_event_selection_started",
+            event_id=str(event_id),
+        )
 
         try:
             async with self._pool.connection() as conn:
@@ -185,8 +203,7 @@ class EventPostgresRepository:
                     row_factory=psycopg.rows.class_row(EventRow)
                 ) as cursor:
                     await cursor.execute(
-                        SELECT_EVENTS_QUERY_BY_ID, {
-                            "id": str(event_id), "limit": limit}
+                        SELECT_EVENTS_QUERY_BY_ID, {"id": str(event_id), "limit": limit}
                     )
                     rows = await cursor.fetchall()
 
@@ -224,8 +241,7 @@ class EventPostgresRepository:
                     row_factory=psycopg.rows.class_row(EventRow)
                 ) as cursor:
                     await cursor.execute(
-                        SELECT_EVENTS_QUERY_BY_NUM, {
-                            "offset": offset, "limit": limit}
+                        SELECT_EVENTS_QUERY_BY_NUM, {"offset": offset, "limit": limit}
                     )
                     rows = await cursor.fetchall()
 
@@ -356,8 +372,7 @@ class EventPostgresRepository:
                 ) as cursor:
                     await cursor.execute(
                         SELECT_PARTICIPANTS_QUERY_BY_NUM,
-                        {"event_id": str(event_id),
-                         "offset": offset, "limit": limit},
+                        {"event_id": str(event_id), "offset": offset, "limit": limit},
                     )
                     rows = await cursor.fetchall()
 

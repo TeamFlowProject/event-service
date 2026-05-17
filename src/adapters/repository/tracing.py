@@ -34,9 +34,7 @@ def trace_db_operation(service: str, operation: str, table: str):
                     duration = time.perf_counter() - start
 
                     DB_QUERY_DURATION_SECONDS.labels(
-                        service=service,
-                        operation=operation,
-                        table=table
+                        service=service, operation=operation, table=table
                     ).observe(duration)
 
                     logger.debug(
@@ -70,5 +68,7 @@ def trace_db_operation(service: str, operation: str, table: str):
                         )
 
                     raise
+
         return wrapper
+
     return decorator

@@ -73,12 +73,12 @@ def create_event_router(event_service: EventService) -> APIRouter:
             logger.warning("event_already_exists", event_id=str(event_id))
             raise HTTPException(status_code=409, detail="Event already exists")
         except (EventRepositoryError, Exception) as e:
-            logger.warning("event_creation_failed",
-                           event_id=str(event_id), error=str(e))
+            logger.warning(
+                "event_creation_failed", event_id=str(event_id), error=str(e)
+            )
             span.record_exception(e)
             span.set_status(trace.StatusCode.ERROR, str(e))
-            raise HTTPException(
-                status_code=500, detail="Failed to create event")
+            raise HTTPException(status_code=500, detail="Failed to create event")
 
         logger.info("event_created_successfully", event_id=str(created_id))
         return CreatedResourceResponse(id=created_id)
@@ -123,8 +123,7 @@ def create_event_router(event_service: EventService) -> APIRouter:
         try:
             event = await event_service.get_event_by_id(event_id)
         except EventNotFoundError:
-            logger.warning("event_not_found_for_update",
-                           event_id=str(event_id))
+            logger.warning("event_not_found_for_update", event_id=str(event_id))
             raise HTTPException(status_code=404, detail="Event not found")
 
         updated_event = EventModel(
@@ -146,16 +145,13 @@ def create_event_router(event_service: EventService) -> APIRouter:
         try:
             await event_service.update_event(updated_event)
         except EventNotFoundError:
-            logger.warning("event_not_found_for_update",
-                           event_id=str(event_id))
+            logger.warning("event_not_found_for_update", event_id=str(event_id))
             raise HTTPException(status_code=404, detail="Event not found")
         except EventRepositoryError as e:
-            logger.warning("event_update_failed",
-                           event_id=str(event_id), error=str(e))
+            logger.warning("event_update_failed", event_id=str(event_id), error=str(e))
             span.record_exception(e)
             span.set_status(trace.StatusCode.ERROR, str(e))
-            raise HTTPException(
-                status_code=500, detail="Failed to update event")
+            raise HTTPException(status_code=500, detail="Failed to update event")
 
         logger.info("event_updated_successfully", event_id=str(event_id))
         return EventResponse(
@@ -184,16 +180,13 @@ def create_event_router(event_service: EventService) -> APIRouter:
         try:
             await event_service.delete_event(event_id)
         except EventNotFoundError:
-            logger.warning("event_not_found_for_delete",
-                           event_id=str(event_id))
+            logger.warning("event_not_found_for_delete", event_id=str(event_id))
             raise HTTPException(status_code=404, detail="Event not found")
         except EventRepositoryError as e:
-            logger.warning("event_delete_failed",
-                           event_id=str(event_id), error=str(e))
+            logger.warning("event_delete_failed", event_id=str(event_id), error=str(e))
             span.record_exception(e)
             span.set_status(trace.StatusCode.ERROR, str(e))
-            raise HTTPException(
-                status_code=500, detail="Failed to delete event")
+            raise HTTPException(status_code=500, detail="Failed to delete event")
 
         logger.info("event_deleted_successfully", event_id=str(event_id))
 
@@ -280,8 +273,7 @@ def create_event_router(event_service: EventService) -> APIRouter:
         try:
             await event_service.add_participant(event_id, participant)
         except EventNotFoundError:
-            logger.warning("event_not_found_for_participant",
-                           event_id=str(event_id))
+            logger.warning("event_not_found_for_participant", event_id=str(event_id))
             raise HTTPException(status_code=404, detail="Event not found")
         except ParticipantError as e:
             logger.warning(
@@ -298,8 +290,7 @@ def create_event_router(event_service: EventService) -> APIRouter:
                 participant_id=str(participant_id),
                 error=str(e),
             )
-            raise HTTPException(
-                status_code=500, detail="Failed to add participant")
+            raise HTTPException(status_code=500, detail="Failed to add participant")
 
         logger.info(
             "participant_added_successfully",
@@ -337,24 +328,23 @@ def create_event_router(event_service: EventService) -> APIRouter:
                 limit=limit,
             )
         except EventNotFoundError:
-            logger.warning("event_not_found_for_participants",
-                           event_id=str(event_id))
+            logger.warning("event_not_found_for_participants", event_id=str(event_id))
             raise HTTPException(status_code=404, detail="Event not found")
         except ParticipantNotFoundError:
             logger.warning("participant_not_found", event_id=str(event_id))
-            raise HTTPException(
-                status_code=404, detail="Participant not found")
+            raise HTTPException(status_code=404, detail="Participant not found")
         except PaginationError as e:
             logger.warning("participants_pagination_error", error=str(e))
             raise HTTPException(status_code=400, detail=str(e))
         except EventRepositoryError as e:
-            logger.warning("participants_fetch_failed",
-                           event_id=str(event_id), error=str(e))
-            raise HTTPException(
-                status_code=500, detail="Failed to get participants")
+            logger.warning(
+                "participants_fetch_failed", event_id=str(event_id), error=str(e)
+            )
+            raise HTTPException(status_code=500, detail="Failed to get participants")
 
-        logger.info("participants_received", event_id=str(
-            event_id), count=len(participants))
+        logger.info(
+            "participants_received", event_id=str(event_id), count=len(participants)
+        )
         items = [
             Participant(
                 id=p.id,
@@ -401,13 +391,10 @@ def create_event_router(event_service: EventService) -> APIRouter:
             logger.warning("participant_events_pagination_error", error=str(e))
             raise HTTPException(status_code=400, detail=str(e))
         except ParticipantNotFoundError:
-            logger.warning("participant_not_found",
-                           participant_id=str(participant_id))
-            raise HTTPException(
-                status_code=404, detail="Participant not found")
+            logger.warning("participant_not_found", participant_id=str(participant_id))
+            raise HTTPException(status_code=404, detail="Participant not found")
         except EventNotFoundError:
-            logger.warning("event_not_found",
-                           participant_id=str(participant_id))
+            logger.warning("event_not_found", participant_id=str(participant_id))
             raise HTTPException(status_code=404, detail="Event not found")
         except EventRepositoryError as e:
             logger.warning(

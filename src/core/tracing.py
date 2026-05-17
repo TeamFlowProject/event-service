@@ -6,8 +6,8 @@ from opentelemetry.sdk.resources import Resource, SERVICE_NAME
 
 
 def setup_tracing(
-        service_name: str,
-        otlp_endpoint: str = "http://localhost:4317",
+    service_name: str,
+    otlp_endpoint: str = "http://localhost:4317",
 ) -> None:
     """
     OpenTelemetry tracing initialization and Jaeger export connection.
