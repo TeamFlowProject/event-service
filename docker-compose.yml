@@ -107,8 +107,27 @@ services:
     depends_on:
       - prometheus
       - jaeger
+      - loki
     networks:
       - backend
+
+  loki:
+    image: grafana/loki:2.9.0
+    ports:
+      - "3100:3100"
+    networks:
+      - backend
+
+  promtail:
+    image: grafana/promtail:2.9.0
+    volumes:
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - ./docker/promtail.yml:/etc/promtail/config.yml
+    networks:
+      - backend
+    depends_on:
+      - loki
+      - event-service
 
 volumes:
   postgres_data:
