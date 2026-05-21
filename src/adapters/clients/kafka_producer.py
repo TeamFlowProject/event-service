@@ -32,6 +32,12 @@ from src.adapters.clients.topics import (
     JOIN_REQUEST_CANCELED,
     JOIN_REQUEST_ACCEPTED,
     JOIN_REQUEST_REJECTED,
+    TEAM_CREATED,
+    TEAM_UPDATED,
+    TEAM_DELETED,
+    TEAM_SUBMITTED,
+    TEAM_MEMBER_LEFT,
+    TEAM_MEMBER_KICKED,
 )
 from src.adapters.clients.dto.invitation import (
     InvitationCreated,
@@ -44,6 +50,16 @@ from src.adapters.clients.dto.invitation import (
     JoinRequestRejected,
 )
 from src.models.invitation import Invitation, JoinRequest
+from src.models.team import Team
+from src.models.event import Participant
+from src.adapters.clients.dto.team import (
+    TeamCreated,
+    TeamUpdated,
+    TeamDeleted,
+    TeamSubmitted,
+    MemberLeft,
+    MemberKicked,
+)
 
 tracer = trace.get_tracer(__name__)
 
@@ -186,4 +202,40 @@ class KafkaProducerClient:
         await self._producer.send_and_wait(
             topic=JOIN_REQUEST_REJECTED,
             value=JoinRequestRejected.from_model(join_request),
+        )
+
+    async def send_team_created(self, team: Team) -> None:
+        await self._producer.send_and_wait(
+            topic=TEAM_CREATED,
+            value=TeamCreated.from_model(team),
+        )
+
+    async def send_team_updated(self, team: Team) -> None:
+        await self._producer.send_and_wait(
+            topic=TEAM_UPDATED,
+            value=TeamUpdated.from_model(team),
+        )
+
+    async def send_team_deleted(self, team: Team) -> None:
+        await self._producer.send_and_wait(
+            topic=TEAM_DELETED,
+            value=TeamDeleted.from_model(team),
+        )
+
+    async def send_team_submitted(self, team: Team) -> None:
+        await self._producer.send_and_wait(
+            topic=TEAM_SUBMITTED,
+            value=TeamSubmitted.from_model(team),
+        )
+
+    async def send_member_left(self, team: Team, member: Participant) -> None:
+        await self._producer.send_and_wait(
+            topic=TEAM_MEMBER_LEFT,
+            value=MemberLeft.from_model(team, member),
+        )
+
+    async def send_member_kicked(self, team: Team, member: Participant) -> None:
+        await self._producer.send_and_wait(
+            topic=TEAM_MEMBER_KICKED,
+            value=MemberKicked.from_model(team, member),
         )
