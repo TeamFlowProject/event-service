@@ -2,7 +2,7 @@
 CREATE TABLE team_members (
     team_id UUID NOT NULL,
     member_id UUID NOT NULL,
-    role_id UUID NOT NULL REFERENCES roles(id) ON DELETE RESTRICT,
+    role_id UUID NOT NULL REFERENCES roles (id) ON DELETE RESTRICT,
     joined_at TIMESTAMP NOT NULL DEFAULT NOW(),
 
     PRIMARY KEY (team_id, member_id),

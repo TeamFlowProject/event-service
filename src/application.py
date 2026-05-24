@@ -11,13 +11,18 @@ from src.core.tracing import setup_tracing
 from src.core.metrics import metrics_endpoint
 from src.adapters.clients.kafka_producer import KafkaProducerClient, dto_serializer
 from src.adapters.repository.event.postgres.repository import EventPostgresRepository
+from src.adapters.repository.invitation.postgres.repository import (
+    InvitationPostgresRepository,
+)
 from src.adapters.repository.track.postgres.repository import TrackPostgresRepository
 from src.config import Settings
 from src.controller.middleware import ObservabilityMiddleware
 from src.controller.http.event.router import create_event_router
+from src.controller.http.invitation.router import create_invitation_router
 from src.controller.http.track.router import create_track_router
 from src.controller.kafka.event_consumer import EventKafkaConsumer
 from src.service.event.service import EventService
+from src.service.invitation.service import InvitationService
 from src.service.track.service import TrackService
 
 
@@ -43,6 +48,7 @@ async def run_application(settings: Settings) -> None:
     )
     event_repository = EventPostgresRepository(db_connection)  # type: ignore
     track_repository = TrackPostgresRepository(db_connection)  # type: ignore
+    invitation_repository = InvitationPostgresRepository(db_connection)  # type: ignore
     logger.debug("Database connection established")
 
     logger.debug("Starting Kafka producer: {}", settings.kafka_bootstrap)
@@ -56,13 +62,16 @@ async def run_application(settings: Settings) -> None:
 
     event_service = EventService(event_repository, kafka_producer)
     track_service = TrackService(track_repository, kafka_producer)
+    invitation_service = InvitationService(invitation_repository, kafka_producer)
     logger.debug("EventService initialized")
 
     fastapi_app = FastAPI(title="Event Service")
     event_router = create_event_router(event_service)
     track_router = create_track_router(track_service)
+    invitation_router = create_invitation_router(invitation_service)
     fastapi_app.include_router(event_router)
     fastapi_app.include_router(track_router)
+    fastapi_app.include_router(invitation_router)
     logger.debug("HTTP router registered")
 
     if settings.otel_enabled:

@@ -2,6 +2,23 @@ TRACK_CREATED = "event_service.track.created"
 TRACK_UPDATED = "event_service.track.updated"
 TRACK_DELETED = "event_service.track.deleted"
 
+INVITATION_CREATED = "event_service.invitation.created"
+INVITATION_CANCELED = "event_service.invitation.canceled"
+INVITATION_ACCEPTED = "event_service.invitation.accepted"
+INVITATION_REJECTED = "event_service.invitation.rejected"
+
+JOIN_REQUEST_CREATED = "event_service.join_request.created"
+JOIN_REQUEST_CANCELED = "event_service.join_request.canceled"
+JOIN_REQUEST_ACCEPTED = "event_service.join_request.accepted"
+JOIN_REQUEST_REJECTED = "event_service.join_request.rejected"
+
+TEAM_CREATED = "event_service.team.created"
+TEAM_UPDATED = "event_service.team.updated"
+TEAM_DELETED = "event_service.team.deleted"
+TEAM_SUBMITTED = "event_service.team.submitted"
+TEAM_MEMBER_LEFT = "event_service.team.member.left"
+TEAM_MEMBER_KICKED = "event_service.team.member.kicked"
+
 EVENT_CREATED = "event_service.event.created"
 EVENT_UPDATED = "event_service.event.updated"
 EVENT_DELETED = "event_service.event.deleted"
