@@ -2,70 +2,80 @@ from datetime import datetime
 
 from pydantic import BaseModel
 
-from src.adapters.clients.dto.invitation import Participant, Role
+from src.adapters.clients.dto.invitation import Role
 from src.models.event import Participant as ParticipantModel
 from src.models.team import Team, TeamStatusEnum
 
 
-class TeamDTO(BaseModel):
+class TeamEventDTO(BaseModel):
     id: str
-    track_id: str
-    event_id: str
-    owner: Participant
-    members: list[Participant]
-    required_roles: list[Role]
     name: str
     description: str
+    track_id: str
+    event_id: str
+    owner_id: str
+    required_roles: list[Role]
     status: TeamStatusEnum
     created_at: datetime
     updated_at: datetime
 
     @classmethod
-    def from_model(cls, model: Team) -> "TeamDTO":
-        return cls(
-            id=str(model.id),
-            track_id=str(model.track_id),
-            event_id=str(model.event_id),
-            owner=Participant.from_model(model.owner),
-            members=[Participant.from_model(m) for m in model.members],
-            required_roles=[Role.from_model(r) for r in model.required_roles],
-            name=model.name,
-            description=model.description,
-            status=model.status,
-            created_at=model.created_at,
-            updated_at=model.updated_at,
-        )
-
-
-class TeamCreated(TeamDTO): ...
-
-
-class TeamUpdated(TeamDTO): ...
-
-
-class TeamDeleted(TeamDTO): ...
-
-
-class TeamSubmitted(TeamDTO): ...
-
-
-class MemberEventDTO(BaseModel):
-    team_id: str
-    event_id: str
-    track_id: str
-    member: Participant
+    def _base_fields(cls, model: Team) -> dict:
+        return {
+            "id": str(model.id),
+            "name": model.name,
+            "description": model.description,
+            "track_id": str(model.track_id),
+            "event_id": str(model.event_id),
+            "owner_id": str(model.owner.id),
+            "required_roles": [Role.from_model(r) for r in model.required_roles],
+            "status": model.status,
+            "created_at": model.created_at,
+            "updated_at": model.updated_at,
+        }
 
     @classmethod
-    def from_model(cls, team: Team, member: ParticipantModel) -> "MemberEventDTO":
+    def from_model(cls, model: Team) -> "TeamEventDTO":
+        return cls(**cls._base_fields(model))
+
+
+class TeamWithMembersDTO(TeamEventDTO):
+    member_ids: list[str]
+
+    @classmethod
+    def from_model(cls, model: Team) -> "TeamWithMembersDTO":
         return cls(
-            team_id=str(team.id),
-            event_id=str(team.event_id),
-            track_id=str(team.track_id),
-            member=Participant.from_model(member),
+            **cls._base_fields(model),
+            member_ids=[str(m.id) for m in model.members],
         )
 
 
-class MemberLeft(MemberEventDTO): ...
+class TeamCreated(TeamWithMembersDTO): ...
 
 
-class MemberKicked(MemberEventDTO): ...
+class TeamUpdated(TeamEventDTO): ...
+
+
+class TeamDeleted(TeamWithMembersDTO): ...
+
+
+class TeamSubmitted(TeamWithMembersDTO): ...
+
+
+class MemberTeamEventDTO(TeamEventDTO):
+    member_id: str
+
+    @classmethod
+    def from_team_and_member(
+        cls, team: Team, member: ParticipantModel
+    ) -> "MemberTeamEventDTO":
+        return cls(
+            **cls._base_fields(team),
+            member_id=str(member.id),
+        )
+
+
+class MemberLeft(MemberTeamEventDTO): ...
+
+
+class MemberKicked(MemberTeamEventDTO): ...

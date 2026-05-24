@@ -231,11 +231,11 @@ class KafkaProducerClient:
     async def send_member_left(self, team: Team, member: Participant) -> None:
         await self._producer.send_and_wait(
             topic=TEAM_MEMBER_LEFT,
-            value=MemberLeft.from_model(team, member),
+            value=MemberLeft.from_team_and_member(team, member),
         )
 
     async def send_member_kicked(self, team: Team, member: Participant) -> None:
         await self._producer.send_and_wait(
             topic=TEAM_MEMBER_KICKED,
-            value=MemberKicked.from_model(team, member),
+            value=MemberKicked.from_team_and_member(team, member),
         )

@@ -4,7 +4,6 @@ from typing import cast
 
 import pytest
 from uuid_extensions import uuid7
-from aiokafka import AIOKafkaConsumer
 
 from src.adapters.clients.topics import (
     TEAM_CREATED,
@@ -48,22 +47,28 @@ def _make_team() -> Team:
     )
 
 
-def _assert_team_message(message: dict, team: Team) -> None:
+def _assert_team_event(message: dict, team: Team) -> None:
     assert message["id"] == str(team.id)
     assert message["track_id"] == str(team.track_id)
     assert message["event_id"] == str(team.event_id)
+    assert message["owner_id"] == str(team.owner.id)
     assert message["name"] == team.name
     assert message["description"] == team.description
     assert message["status"] == team.status.value
-    assert message["owner"]["id"] == str(team.owner.id)
-    assert len(message["members"]) == len(team.members)
+    assert "owner" not in message
+    assert "members" not in message
 
 
-def _assert_member_event(message: dict, team: Team, member: Participant) -> None:
-    assert message["team_id"] == str(team.id)
-    assert message["event_id"] == str(team.event_id)
-    assert message["track_id"] == str(team.track_id)
-    assert message["member"]["id"] == str(member.id)
+def _assert_team_with_members(message: dict, team: Team) -> None:
+    _assert_team_event(message, team)
+    assert message["member_ids"] == [str(m.id) for m in team.members]
+
+
+def _assert_member_team_event(message: dict, team: Team, member: Participant) -> None:
+    _assert_team_event(message, team)
+    assert message["member_id"] == str(member.id)
+    assert "team_id" not in message
+    assert "member" not in message
 
 
 @pytest.mark.integration
@@ -75,7 +80,7 @@ class TestKafkaProducerClientTeam:
         await kafka_producer_client.send_team_created(team)
 
         message = await _consume_one(kafka_container, TEAM_CREATED)
-        _assert_team_message(message, team)
+        _assert_team_with_members(message, team)
 
     @pytest.mark.asyncio
     async def test_send_team_updated(self, kafka_producer_client, kafka_container):
@@ -85,7 +90,8 @@ class TestKafkaProducerClientTeam:
         await kafka_producer_client.send_team_updated(team)
 
         message = await _consume_one(kafka_container, TEAM_UPDATED)
-        _assert_team_message(message, team)
+        _assert_team_event(message, team)
+        assert "member_ids" not in message
 
     @pytest.mark.asyncio
     async def test_send_team_deleted(self, kafka_producer_client, kafka_container):
@@ -94,7 +100,7 @@ class TestKafkaProducerClientTeam:
         await kafka_producer_client.send_team_deleted(team)
 
         message = await _consume_one(kafka_container, TEAM_DELETED)
-        _assert_team_message(message, team)
+        _assert_team_with_members(message, team)
 
     @pytest.mark.asyncio
     async def test_send_team_submitted(self, kafka_producer_client, kafka_container):
@@ -104,7 +110,7 @@ class TestKafkaProducerClientTeam:
         await kafka_producer_client.send_team_submitted(team)
 
         message = await _consume_one(kafka_container, TEAM_SUBMITTED)
-        _assert_team_message(message, team)
+        _assert_team_with_members(message, team)
 
     @pytest.mark.asyncio
     async def test_send_member_left(self, kafka_producer_client, kafka_container):
@@ -114,7 +120,7 @@ class TestKafkaProducerClientTeam:
         await kafka_producer_client.send_member_left(team, member)
 
         message = await _consume_one(kafka_container, TEAM_MEMBER_LEFT)
-        _assert_member_event(message, team, member)
+        _assert_member_team_event(message, team, member)
 
     @pytest.mark.asyncio
     async def test_send_member_kicked(self, kafka_producer_client, kafka_container):
@@ -124,4 +130,4 @@ class TestKafkaProducerClientTeam:
         await kafka_producer_client.send_member_kicked(team, member)
 
         message = await _consume_one(kafka_container, TEAM_MEMBER_KICKED)
-        _assert_member_event(message, team, member)
+        _assert_member_team_event(message, team, member)
