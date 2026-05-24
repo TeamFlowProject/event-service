@@ -77,7 +77,7 @@ class TestGetTeam:
         repo.get_team.side_effect = adapter_errors.TeamNotFoundError
 
         with pytest.raises(service_errors.TeamNotFoundError):
-            await service.get_teams(cast(uuid.UUID, uuid7()))
+            await service.get_team(cast(uuid.UUID, uuid7()))
 
 
 @pytest.mark.unit
