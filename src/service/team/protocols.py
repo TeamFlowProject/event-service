@@ -25,6 +25,14 @@ class TeamRepository(Protocol):
         self, team_id: uuid.UUID, status: TeamStatusEnum
     ) -> None: ...
 
+    async def get_teams_by_event_id(self, event_id: uuid.UUID) -> list[Team]: ...
+
+    async def get_teams_by_user_id(self, user_id: uuid.UUID) -> list[Team]: ...
+
+    async def get_user_team_in_event(
+        self, user_id: uuid.UUID, event_id: uuid.UUID
+    ) -> Team | None: ...
+
 
 class KafkaProducer(Protocol):
     """Kafka producer for team events"""

@@ -14,6 +14,36 @@ GET_TEAM_QUERY = """
     FROM teams
     WHERE id = %(id)s
 """
+GET_TEAM_QUERY_BY_EVENT_ID = """
+    SELECT id, track_id, event_id, owner_id, name, description,
+            status, created_at, updated_at
+    FROM teams
+    WHERE event_id = %(event_id)s
+"""
+GET_TEAM_QUERY_BY_USER_ID = """
+    SELECT id, track_id, event_id, owner_id, name, description,
+            status, created_at, updated_at
+    FROM teams
+    WHERE owner_id = %(user_id)s
+    OR t.id IN (
+                SELECT tm.team_id
+                FROM team_members tm
+                WHERE tm.member_id = %s
+            )
+"""
+GET_USER_TEAM_IN_EVENT = """
+    SELECT id, track_id, event_id, owner_id, name, description,
+            status, created_at, updated_at
+    FROM teams
+    WHERE event_id = %(event_id)s
+    AND (owner_id = %(user_id)s
+        OR id IN (
+            SELECT team_id
+            FROM team_members tm
+            WHERE member_id = %(user_id)s
+        ))
+    LIMIT 1
+"""
 
 UPDATE_TEAM_QUERY = """
     UPDATE teams

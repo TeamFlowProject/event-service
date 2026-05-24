@@ -18,6 +18,9 @@ from src.adapters.repository.errors import (
 from src.adapters.repository.team.postgres.queries import (
     CREATE_TEAM_QUERY,
     GET_TEAM_QUERY,
+    GET_TEAM_QUERY_BY_EVENT_ID,
+    GET_TEAM_QUERY_BY_USER_ID,
+    GET_USER_TEAM_IN_EVENT,
     UPDATE_TEAM_QUERY,
     DELETE_TEAM_QUERY,
     CHANGE_TEAM_STATUS_QUERY,
@@ -265,3 +268,64 @@ class TeamPostgresRepository:
             await cursor.execute(GET_ROLES_BY_TRACK_QUERY, {"track_id": str(track_id)})
             rows = await cursor.fetchall()
             return [row.to_model() for row in rows]
+
+    async def get_teams_by_event_id(self, event_id: uuid.UUID) -> list[Team]:
+        async with self._pool.connection() as conn:
+            async with conn.cursor(
+                row_factory=psycopg.rows.class_row(TeamRow)
+            ) as cursor:
+                await cursor.execute(
+                    GET_TEAM_QUERY_BY_EVENT_ID, {"event_id": str(event_id)}
+                )
+                rows = await cursor.fetchall()
+                teams = []
+                for row in rows:
+                    owner = await self._get_participant(
+                        conn, row.owner_id, row.event_id
+                    )
+                    members = await self._get_team_members(conn, row.id, row.event_id)
+                    required_roles = await self._get_team_roles(conn, row.id)
+                    teams.append(row.to_model(owner, members, required_roles))
+
+                return teams
+
+    async def get_teams_by_user_id(self, user_id: uuid.UUID) -> list[Team]:
+        async with self._pool.connection() as conn:
+            async with conn.cursor(
+                row_factory=psycopg.rows.class_row(TeamRow)
+            ) as cursor:
+                await cursor.execute(
+                    GET_TEAM_QUERY_BY_USER_ID, {"user_id": str(user_id)}
+                )
+                rows = await cursor.fetchall()
+                teams = []
+                for row in rows:
+                    owner = await self._get_participant(
+                        conn, row.owner_id, row.event_id
+                    )
+                    members = await self._get_team_members(conn, row.id, row.event_id)
+                    required_roles = await self._get_team_roles(conn, row.id)
+                    teams.append(row.to_model(owner, members, required_roles))
+
+                return teams
+
+    async def get_user_team_in_event(
+        self, user_id: uuid.UUID, event_id: uuid.UUID
+    ) -> Team | None:
+        async with self._pool.connection() as conn:
+            async with conn.cursor(
+                row_factory=psycopg.rows.class_row(TeamRow)
+            ) as cursor:
+                await cursor.execute(
+                    GET_USER_TEAM_IN_EVENT,
+                    {"event_id": str(event_id), "user_id": str(user_id)},
+                )
+                row = await cursor.fetchone()
+
+                if not row:
+                    return None
+
+                owner = await self._get_participant(conn, row.owner_id, row.event_id)
+                members = await self._get_team_members(conn, row.id, row.event_id)
+                required_roles = await self._get_team_roles(conn, row.id)
+                return row.to_model(owner, members, required_roles)

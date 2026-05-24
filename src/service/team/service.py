@@ -14,7 +14,7 @@ class TeamService:
         self._team_repository = team_repository
         self._kafka_producer = kafka_producer
 
-    async def get_teams(self, team_id: uuid.UUID) -> Team:
+    async def get_team(self, team_id: uuid.UUID) -> Team:
         try:
             return await self._team_repository.get_team(team_id)
         except adapter_errors.TeamNotFoundError as e:
@@ -136,3 +136,41 @@ class TeamService:
             await self._team_repository.change_team_status(team_id, status)
         except adapter_errors.TeamNotFoundError as e:
             raise service_errors.TeamNotFoundError("Failed to change status") from e
+
+    async def get_teams_by_event_id(self, event_id: uuid.UUID) -> list[Team]:
+        try:
+            teams = await self._team_repository.get_teams_by_event_id(event_id)
+            if not teams:
+                raise service_errors.EventNotFoundError(f"Event {event_id} not found")
+            return teams
+        except adapter_errors.EventNotFoundError as e:
+            raise service_errors.EventNotFoundError(
+                f"Event {event_id} not found"
+            ) from e
+
+    async def get_teams_by_user(self, user_id: uuid.UUID) -> list[Team]:
+        try:
+            teams = await self._team_repository.get_teams_by_user_id(user_id)
+            if not teams:
+                raise service_errors.ParticipantNotFoundError(
+                    f"User {user_id} not found"
+                )
+            return teams
+        except adapter_errors.ParticipantNotFoundError as e:
+            raise service_errors.ParticipantNotFoundError(
+                f"User {user_id} not found"
+            ) from e
+
+    async def get_user_team_in_event(
+        self, user_id: uuid.UUID, event_id: uuid.UUID
+    ) -> Team | None:
+        try:
+            return await self._team_repository.get_user_team_in_event(user_id, event_id)
+        except adapter_errors.EventNotFoundError as e:
+            raise service_errors.EventNotFoundError(
+                f"Event {event_id} not found"
+            ) from e
+        except adapter_errors.ParticipantNotFoundError as e:
+            raise service_errors.ParticipantNotFoundError(
+                f"User {user_id} not found"
+            ) from e

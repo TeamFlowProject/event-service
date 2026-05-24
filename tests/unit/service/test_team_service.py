@@ -67,7 +67,7 @@ class TestGetTeam:
         team = make_team()
         repo.get_team.return_value = team
 
-        result = await service.get_teams(team.id)
+        result = await service.get_team(team.id)
 
         assert result == team
         repo.get_team.assert_called_once_with(team.id)
@@ -77,7 +77,7 @@ class TestGetTeam:
         repo.get_team.side_effect = adapter_errors.TeamNotFoundError
 
         with pytest.raises(service_errors.TeamNotFoundError):
-            await service.get_teams(cast(uuid.UUID, uuid7()))
+            await service.get_team(cast(uuid.UUID, uuid7()))
 
 
 @pytest.mark.unit
