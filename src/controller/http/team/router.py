@@ -41,7 +41,9 @@ def create_team_router(team_service: TeamService) -> APIRouter:
     async def get_event_teams(event_id: uuid.UUID):
         try:
             teams = await team_service.get_teams_by_event_id(event_id)
-            return GetTeamsResponse(teams=[GetTeamResponse.from_model(t) for t in teams])
+            return GetTeamsResponse(
+                teams=[GetTeamResponse.from_model(t) for t in teams]
+            )
         except EventNotFoundError:
             raise HTTPException(status_code=404, detail="Event not found")
 
@@ -49,7 +51,9 @@ def create_team_router(team_service: TeamService) -> APIRouter:
     async def get_user_teams(user_id: uuid.UUID):
         try:
             teams = await team_service.get_teams_by_user(user_id)
-            return GetTeamsResponse(teams=[GetTeamResponse.from_model(t) for t in teams])
+            return GetTeamsResponse(
+                teams=[GetTeamResponse.from_model(t) for t in teams]
+            )
         except ParticipantNotFoundError:
             raise HTTPException(status_code=404, detail="User not found")
 
