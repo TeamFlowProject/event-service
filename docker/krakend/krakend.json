@@ -2,7 +2,6 @@
   "version": 3,
   "name": "TeamFlow API Gateway",
   "timeout": "30s",
-  "cache_ttl": "300s",
   "port": 8080,
   "extra_config": {
     "telemetry/logging": {
@@ -14,15 +13,226 @@
   },
   "endpoints": [
     {
-      "endpoint": "/api/v1/*",
+      "@comment": "Event API",
+      "endpoint": "/api/v1/events",
+      "method": "POST",
       "input_headers": ["*"],
       "input_query_strings": ["*"],
       "backend": [
         {
-          "url_pattern": "/api/v1/{path}",
-          "encoding": "no-op",
           "host": ["http://event-service:8001"],
-          "wildcard": true
+          "url_pattern": "/api/v1/events",
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
+      "endpoint": "/api/v1/events",
+      "method": "GET",
+      "input_headers": ["*"],
+      "input_query_strings": ["*"],
+      "backend": [
+        {
+          "host": ["http://event-service:8001"],
+          "url_pattern": "/api/v1/events",
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
+      "endpoint": "/api/v1/events/{event_id}",
+      "method": "GET",
+      "input_headers": ["*"],
+      "input_query_strings": ["*"],
+      "backend": [
+        {
+          "host": ["http://event-service:8001"],
+          "url_pattern": "/api/v1/events/{event_id}",
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
+      "endpoint": "/api/v1/events/{event_id}",
+      "method": "PUT",
+      "input_headers": ["*"],
+      "input_query_strings": ["*"],
+      "backend": [
+        {
+          "host": ["http://event-service:8001"],
+          "url_pattern": "/api/v1/events/{event_id}",
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
+      "endpoint": "/api/v1/events/{event_id}",
+      "method": "DELETE",
+      "input_headers": ["*"],
+      "input_query_strings": ["*"],
+      "backend": [
+        {
+          "host": ["http://event-service:8001"],
+          "url_pattern": "/api/v1/events/{event_id}",
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
+      "endpoint": "/api/v1/events/{event_id}/participants",
+      "method": "POST",
+      "input_headers": ["*"],
+      "input_query_strings": ["*"],
+      "backend": [
+        {
+          "host": ["http://event-service:8001"],
+          "url_pattern": "/api/v1/events/{event_id}/participants",
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
+      "endpoint": "/api/v1/events/{event_id}/participants",
+      "method": "GET",
+      "input_headers": ["*"],
+      "input_query_strings": ["*"],
+      "backend": [
+        {
+          "host": ["http://event-service:8001"],
+          "url_pattern": "/api/v1/events/{event_id}/participants",
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
+      "endpoint": "/api/v1/participants/{participant_id}/events",
+      "method": "GET",
+      "input_headers": ["*"],
+      "input_query_strings": ["*"],
+      "backend": [
+        {
+          "host": ["http://event-service:8001"],
+          "url_pattern": "/api/v1/participants/{participant_id}/events",
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
+      "@comment": "Track API",
+      "endpoint": "/api/v1/track",
+      "method": "POST",
+      "input_headers": ["*"],
+      "input_query_strings": ["*"],
+      "backend": [
+        {
+          "host": ["http://event-service:8001"],
+          "url_pattern": "/api/v1/track",
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
+      "endpoint": "/api/v1/track/{track_id}",
+      "method": "GET",
+      "input_headers": ["*"],
+      "input_query_strings": ["*"],
+      "backend": [
+        {
+          "host": ["http://event-service:8001"],
+          "url_pattern": "/api/v1/track/{track_id}",
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
+      "endpoint": "/api/v1/track/{track_id}",
+      "method": "PUT",
+      "input_headers": ["*"],
+      "input_query_strings": ["*"],
+      "backend": [
+        {
+          "host": ["http://event-service:8001"],
+          "url_pattern": "/api/v1/track/{track_id}",
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
+      "endpoint": "/api/v1/track/{track_id}",
+      "method": "DELETE",
+      "input_headers": ["*"],
+      "input_query_strings": ["*"],
+      "backend": [
+        {
+          "host": ["http://event-service:8001"],
+          "url_pattern": "/api/v1/track/{track_id}",
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
+      "endpoint": "/api/v1/event/{event_id}/tracks",
+      "method": "GET",
+      "input_headers": ["*"],
+      "input_query_strings": ["*"],
+      "backend": [
+        {
+          "host": ["http://event-service:8001"],
+          "url_pattern": "/api/v1/event/{event_id}/tracks",
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
+      "@comment": "Observability & FastAPI docs",
+      "endpoint": "/metrics",
+      "method": "GET",
+      "input_headers": ["*"],
+      "input_query_strings": ["*"],
+      "backend": [
+        {
+          "host": ["http://event-service:8001"],
+          "url_pattern": "/metrics",
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
+      "endpoint": "/docs",
+      "method": "GET",
+      "input_headers": ["*"],
+      "input_query_strings": ["*"],
+      "backend": [
+        {
+          "host": ["http://event-service:8001"],
+          "url_pattern": "/docs",
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
+      "endpoint": "/redoc",
+      "method": "GET",
+      "input_headers": ["*"],
+      "input_query_strings": ["*"],
+      "backend": [
+        {
+          "host": ["http://event-service:8001"],
+          "url_pattern": "/redoc",
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
+      "endpoint": "/openapi.json",
+      "method": "GET",
+      "input_headers": ["*"],
+      "input_query_strings": ["*"],
+      "backend": [
+        {
+          "host": ["http://event-service:8001"],
+          "url_pattern": "/openapi.json",
+          "encoding": "no-op"
         }
       ]
     }
