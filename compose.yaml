@@ -1,16 +1,26 @@
+name: event-service
+
 services:
+  krakend:
+    image: devopsfaith/krakend:2.7
+    ports:
+      - "${KRAKEND_PORT}:8080"
+    volumes:
+      - ./docker/krakend/krakend.json:/etc/krakend/krakend.json:ro
+    env_file:
+      - .env_krakend
+    depends_on:
+      event-service:
+        condition: service_started
+    networks:
+      - backend
+
   event-service:
     build: .
+    env_file:
+      - .env_event_service
     ports:
-      - "8001:8001"
-    environment:
-      - DATABASE_DSN=postgresql://user:password@postgres:5432/event_db
-      - KAFKA_BOOTSTRAP=redpanda:9092
-
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4317
-      - OTEL_SERVICE_NAME=event-service
-
-      - LOG_JSON=true
+      - "${EVENT_SERVICE_PORT}:8001"
     depends_on:
       postgres:
         condition: service_healthy
@@ -25,16 +35,14 @@ services:
 
   postgres:
     image: postgres:16
-    environment:
-      POSTGRES_DB: event_db
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
+    env_file:
+      - .env_postgres
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U user -d event_db"]
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -43,17 +51,23 @@ services:
 
   redpanda:
     image: redpandadata/redpanda:v24.1.1
+    env_file:
+      - .env_redpanda
     command:
       - redpanda
       - start
-      - --kafka-addr internal://0.0.0.0:9092,external://0.0.0.0:19092
-      - --advertise-kafka-addr internal://redpanda:9092,external://localhost:19092
-      - --smp 1
-      - --memory 1024M
+      - --kafka-addr
+      - "${REDPANDA_KAFKA_ADDR}"
+      - --advertise-kafka-addr
+      - "${REDPANDA_ADVERTISE_KAFKA_ADDR}"
+      - --smp
+      - "${REDPANDA_SMP}"
+      - --memory
+      - "${REDPANDA_MEMORY}"
       - --overprovisioned
-      - --default-log-level=warn
+      - --default-log-level=${REDPANDA_LOG_LEVEL}
     ports:
-      - "19092:19092"
+      - "${REDPANDA_EXTERNAL_PORT}:19092"
     healthcheck:
       test: ["CMD-SHELL", "rpk cluster health | grep -q 'Healthy:.*true'"]
       interval: 10s
@@ -64,10 +78,10 @@ services:
 
   redpanda-console:
     image: redpandadata/console:v2.6.0
+    env_file:
+      - .env_redpanda_console
     ports:
-      - "8080:8080"
-    environment:
-      - KAFKA_BROKERS=redpanda:9092
+      - "${REDPANDA_CONSOLE_PORT}:8080"
     depends_on:
       redpanda:
         condition: service_healthy
@@ -76,19 +90,21 @@ services:
 
   jaeger:
     image: jaegertracing/all-in-one:1.57
+    env_file:
+      - .env_jaeger
     ports:
-      - "16686:16686"
-      - "4317:4317"
-      - "4318:4318"
-    environment:
-      - COLLECTOR_OTLP_ENABLED=true
+      - "${JAEGER_UI_PORT}:16686"
+      - "${JAEGER_OTLP_GRPC_PORT}:4317"
+      - "${JAEGER_OTLP_HTTP_PORT}:4318"
     networks:
       - backend
 
   prometheus:
     image: prom/prometheus:v2.51.0
+    env_file:
+      - .env_prometheus
     ports:
-      - "9090:9090"
+      - "${PROMETHEUS_PORT}:9090"
     volumes:
       - ./docker/prometheus.yml:/etc/prometheus/prometheus.yml
     networks:
@@ -96,12 +112,10 @@ services:
 
   grafana:
     image: grafana/grafana:10.4.0
+    env_file:
+      - .env_grafana
     ports:
-      - "3000:3000"
-    environment:
-      - GF_AUTH_ANONYMOUS_ENABLED=true
-      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
-      - GF_LOG_LEVEL=warn
+      - "${GRAFANA_PORT}:3000"
     volumes:
       - ./docker/grafana/provisioning:/etc/grafana/provisioning
     depends_on:
@@ -113,13 +127,17 @@ services:
 
   loki:
     image: grafana/loki:2.9.0
+    env_file:
+      - .env_loki
     ports:
-      - "3100:3100"
+      - "${LOKI_PORT}:3100"
     networks:
       - backend
 
   promtail:
     image: grafana/promtail:2.9.0
+    env_file:
+      - .env_promtail
     volumes:
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
       - ./docker/promtail.yml:/etc/promtail/config.yml

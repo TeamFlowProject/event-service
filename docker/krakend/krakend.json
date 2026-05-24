@@ -1,0 +1,30 @@
+{
+  "version": 3,
+  "name": "TeamFlow API Gateway",
+  "timeout": "30s",
+  "cache_ttl": "300s",
+  "port": 8080,
+  "extra_config": {
+    "telemetry/logging": {
+      "level": "INFO",
+      "prefix": "[KRAKEND]",
+      "syslog": false,
+      "stdout": true
+    }
+  },
+  "endpoints": [
+    {
+      "endpoint": "/api/v1/*",
+      "input_headers": ["*"],
+      "input_query_strings": ["*"],
+      "backend": [
+        {
+          "url_pattern": "/api/v1/{path}",
+          "encoding": "no-op",
+          "host": ["http://event-service:8001"],
+          "wildcard": true
+        }
+      ]
+    }
+  ]
+}
