@@ -22,3 +22,10 @@ class Settings(BaseSettings):
     kafka_topic_events: str = Field(default="event-events", alias="KAFKA_TOPIC_EVENTS")
     kafka_group_id: str = Field(default="event-service", alias="KAFKA_GROUP_ID")
     log_level: str = Field(default="INFO", alias="LOG_LEVEL")
+    log_json: bool = Field(default=False, alias="LOG_JSON")
+    otel_service_name: str = Field(default="event-service", alias="OTEL_SERVICE_NAME")
+    otel_exporter_otlp_endpoint: str = Field(
+        default="http://localhost:4317",
+        alias="OTEL_EXPORTER_OTLP_ENDPOINT",
+    )
+    otel_enabled: bool = Field(default=True, alias="OTEL_ENABLED")
