@@ -1,9 +1,9 @@
 import uuid
-from typing import cast
+from typing import Optional, cast
 from uuid_extensions import uuid7
 from loguru import logger
 from opentelemetry import trace
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Header, HTTPException
 
 from src.controller.http.track.schemas import (
     CreateTrackRequest,
@@ -26,7 +26,12 @@ def create_track_router(track_service: TrackService) -> APIRouter:
     router = APIRouter(prefix="/api/v1", tags=["track"])
 
     @router.post("/track", response_model=dict, status_code=201)
-    async def create_track(request: CreateTrackRequest):
+    async def create_track(
+        request: CreateTrackRequest,
+        x_user_id: Optional[uuid.UUID] = Header(None, alias="X-User-Id"),
+    ):
+        if x_user_id is None:
+            raise HTTPException(status_code=401, detail="X-User-Id header missing")
         track_id = cast(uuid.UUID, uuid7())
         span = trace.get_current_span()
         span.set_attribute("track.id", str(track_id))
@@ -54,7 +59,12 @@ def create_track_router(track_service: TrackService) -> APIRouter:
         return {"id": str(created_id)}
 
     @router.get("/track/{track_id}", response_model=Track)
-    async def get_track(track_id: uuid.UUID):
+    async def get_track(
+        track_id: uuid.UUID,
+        x_user_id: Optional[uuid.UUID] = Header(None, alias="X-User-Id"),
+    ):
+        if x_user_id is None:
+            raise HTTPException(status_code=401, detail="X-User-Id header missing")
         span = trace.get_current_span()
         span.set_attribute("track.id", str(track_id))
 
@@ -70,7 +80,12 @@ def create_track_router(track_service: TrackService) -> APIRouter:
         return _track_to_response(track)
 
     @router.get("/event/{event_id}/tracks", response_model=list[Track])
-    async def get_tracks_by_event_id(event_id: uuid.UUID):
+    async def get_tracks_by_event_id(
+        event_id: uuid.UUID,
+        x_user_id: Optional[uuid.UUID] = Header(None, alias="X-User-Id"),
+    ):
+        if x_user_id is None:
+            raise HTTPException(status_code=401, detail="X-User-Id header missing")
         span = trace.get_current_span()
         span.set_attribute("event.id", str(event_id))
 
@@ -79,8 +94,7 @@ def create_track_router(track_service: TrackService) -> APIRouter:
         try:
             tracks = await track_service.get_tracks_by_event_id(event_id)
         except EventNotFoundError:
-            logger.warning("event_not_found_for_tracks",
-                           event_id=str(event_id))
+            logger.warning("event_not_found_for_tracks", event_id=str(event_id))
             raise HTTPException(status_code=404, detail="Event not found")
 
         logger.info(
@@ -91,7 +105,13 @@ def create_track_router(track_service: TrackService) -> APIRouter:
         return [_track_to_response(track) for track in tracks]
 
     @router.put("/track/{track_id}", status_code=204)
-    async def update_track(track_id: uuid.UUID, request: UpdateTrackRequest):
+    async def update_track(
+        track_id: uuid.UUID,
+        request: UpdateTrackRequest,
+        x_user_id: Optional[uuid.UUID] = Header(None, alias="X-User-Id"),
+    ):
+        if x_user_id is None:
+            raise HTTPException(status_code=401, detail="X-User-Id header missing")
         span = trace.get_current_span()
         span.set_attribute("track.id", str(track_id))
 
@@ -102,14 +122,18 @@ def create_track_router(track_service: TrackService) -> APIRouter:
         try:
             await track_service.update_track(track)
         except TrackNotFoundError:
-            logger.warning("track_not_found_for_update",
-                           track_id=str(track_id))
+            logger.warning("track_not_found_for_update", track_id=str(track_id))
             raise HTTPException(status_code=404, detail="Track not found")
 
         logger.info("track_updated_successfully", track_id=str(track_id))
 
     @router.delete("/track/{track_id}", status_code=204)
-    async def delete_track(track_id: uuid.UUID):
+    async def delete_track(
+        track_id: uuid.UUID,
+        x_user_id: Optional[uuid.UUID] = Header(None, alias="X-User-Id"),
+    ):
+        if x_user_id is None:
+            raise HTTPException(status_code=401, detail="X-User-Id header missing")
         span = trace.get_current_span()
         span.set_attribute("track.id", str(track_id))
 
@@ -118,8 +142,7 @@ def create_track_router(track_service: TrackService) -> APIRouter:
         try:
             await track_service.delete_track(track_id)
         except TrackNotFoundError:
-            logger.warning("track_not_found_for_delete",
-                           track_id=str(track_id))
+            logger.warning("track_not_found_for_delete", track_id=str(track_id))
             raise HTTPException(status_code=404, detail="Track not found")
 
         logger.info("track_deleted_successfully", track_id=str(track_id))

@@ -1,38 +1,38 @@
 CREATE_TEAM_QUERY = """
     INSERT INTO teams (
-        id, track_id, event_id, owner_id, name,
+        id, track_id, event_id, owner_id, owner_role_id, name,
         description, status, created_at, updated_at
     ) VALUES (
-        %(id)s, %(track_id)s, %(event_id)s, %(owner_id)s, %(name)s,
+        %(id)s, %(track_id)s, %(event_id)s, %(owner_id)s, %(owner_role_id)s, %(name)s,
         %(description)s, %(status)s, %(created_at)s, %(updated_at)s
     )
 """
 
 GET_TEAM_QUERY = """
-    SELECT id, track_id, event_id, owner_id, name, description,
+    SELECT id, track_id, event_id, owner_id, owner_role_id, name, description,
            status, created_at, updated_at
     FROM teams
     WHERE id = %(id)s
 """
 GET_TEAM_QUERY_BY_EVENT_ID = """
-    SELECT id, track_id, event_id, owner_id, name, description,
+    SELECT id, track_id, event_id, owner_id, owner_role_id, name, description,
             status, created_at, updated_at
     FROM teams
     WHERE event_id = %(event_id)s
 """
 GET_TEAM_QUERY_BY_USER_ID = """
-    SELECT id, track_id, event_id, owner_id, name, description,
+    SELECT id, track_id, event_id, owner_id, owner_role_id, name, description,
             status, created_at, updated_at
     FROM teams
     WHERE owner_id = %(user_id)s
-    OR t.id IN (
+    OR id IN (
                 SELECT tm.team_id
                 FROM team_members tm
-                WHERE tm.member_id = %s
+                WHERE tm.member_id = %(user_id)s
             )
 """
 GET_USER_TEAM_IN_EVENT = """
-    SELECT id, track_id, event_id, owner_id, name, description,
+    SELECT id, track_id, event_id, owner_id, owner_role_id, name, description,
             status, created_at, updated_at
     FROM teams
     WHERE event_id = %(event_id)s
@@ -43,6 +43,21 @@ GET_USER_TEAM_IN_EVENT = """
             WHERE member_id = %(user_id)s
         ))
     LIMIT 1
+"""
+
+CHANGE_OWNER_ROLE_QUERY = """
+    UPDATE teams
+    SET owner_role_id = %(role_id)s,
+        updated_at = NOW()
+    WHERE id = %(team_id)s
+    RETURNING id
+"""
+
+CHANGE_MEMBER_ROLE_QUERY = """
+    UPDATE team_members
+    SET role_id = %(role_id)s
+    WHERE team_id = %(team_id)s AND member_id = %(member_id)s
+    RETURNING member_id
 """
 
 UPDATE_TEAM_QUERY = """
@@ -102,6 +117,12 @@ GET_MEMBER_ROLE_IN_TEAM_QUERY = """
     SELECT role_id
     FROM team_members
     WHERE team_id = %(team_id)s AND member_id = %(member_id)s
+"""
+
+GET_OWNER_ROLE_IN_TEAM_QUERY = """
+    SELECT owner_role_id
+    FROM teams
+    WHERE id = %(team_id)s
 """
 
 # Team roles

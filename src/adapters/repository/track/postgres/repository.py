@@ -49,9 +49,9 @@ class TrackPostgresRepository:
                                 [role.__dict__ for role in track.required_roles],
                             )
         except ForeignKeyViolation:
-            raise EventNotFoundError(
-                f"Event with id {track.event_id} not found")
+            raise EventNotFoundError(f"Event with id {track.event_id} not found")
         except Error as e:
+            logger.error("db_track_repository_error", error=str(e))
             raise Exception from e
 
     @trace_db_operation("track_service", "UPDATE", "track")
@@ -88,6 +88,7 @@ class TrackPostgresRepository:
         except TrackNotFoundError:
             raise
         except Error as e:
+            logger.error("db_track_repository_error", error=str(e))
             raise Exception from e
 
     @trace_db_operation("track_service", "DELETE", "track")
@@ -101,12 +102,11 @@ class TrackPostgresRepository:
                         await cursor.execute(DELETE_ROLES_QUERY, {"track_id": str(id)})
                         await cursor.execute(DELETE_TRACKS_QUERY, {"id": str(id)})
                         if await cursor.fetchone() is None:
-                            raise TrackNotFoundError(
-                                f"Track with id {id} not found"
-                            )
+                            raise TrackNotFoundError(f"Track with id {id} not found")
         except TrackNotFoundError:
             raise
         except Error as e:
+            logger.error("db_track_repository_error", error=str(e))
             raise Exception from e
 
     @trace_db_operation("track_service", "SELECT", "track")
@@ -121,15 +121,12 @@ class TrackPostgresRepository:
                     await track_cursor.execute(SELECT_TRACKS_QUERY, {"id": str(id)})
                     row = await track_cursor.fetchone()
                     if row is None:
-                        raise TrackNotFoundError(
-                            f"Track with id {id} not found")
+                        raise TrackNotFoundError(f"Track with id {id} not found")
 
                 async with conn.cursor(
                     row_factory=psycopg.rows.class_row(RoleRow)
                 ) as role_cursor:
-                    await role_cursor.execute(
-                        SELECT_ROLES_QUERY, {"track_id": str(id)}
-                    )
+                    await role_cursor.execute(SELECT_ROLES_QUERY, {"track_id": str(id)})
                     roles = [
                         Role(
                             id=role.id,
@@ -158,12 +155,12 @@ class TrackPostgresRepository:
         except TrackNotFoundError:
             raise
         except Error as e:
+            logger.error("db_track_repository_error", error=str(e))
             raise Exception from e
 
     @trace_db_operation("track_service", "SELECT", "track")
     async def get_tracks_by_event_id(self, event_id: uuid.UUID) -> list[Track]:
-        logger.debug("db_tracks_by_event_select_started",
-                     event_id=str(event_id))
+        logger.debug("db_tracks_by_event_select_started", event_id=str(event_id))
 
         try:
             async with self._pool.connection() as conn:
@@ -213,4 +210,5 @@ class TrackPostgresRepository:
                         for row in rows
                     ]
         except Error as e:
+            logger.error("db_track_repository_error", error=str(e))
             raise Exception from e

@@ -11,6 +11,7 @@ class CreateTeamRequest(BaseModel):
     track_id: uuid.UUID
     event_id: uuid.UUID
     owner_id: uuid.UUID
+    owner_role_id: uuid.UUID
     name: str = Field(..., min_length=1, max_length=100)
     description: str = Field(default="", max_length=500)
 
@@ -22,6 +23,7 @@ class CreateTeamRequest(BaseModel):
             surname="",
             patronymic="",
             have_team=False,
+            role_id=self.owner_role_id,
         )
         return Team(
             id=team_id,
@@ -32,8 +34,12 @@ class CreateTeamRequest(BaseModel):
             required_roles=[],
             name=self.name,
             description=self.description,
-            status=TeamStatusEnum.DRAFT,
+            status=TeamStatusEnum.BUILDING,
         )
+
+
+class ChangeMemberRoleRequest(BaseModel):
+    role_id: uuid.UUID
 
 
 class UpdateTeamRequest(BaseModel):

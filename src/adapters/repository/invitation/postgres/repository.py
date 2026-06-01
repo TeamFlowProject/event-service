@@ -10,11 +10,8 @@ from psycopg.errors import UniqueViolation
 from src.adapters.repository.tracing import trace_db_operation
 import src.adapters.repository.errors as adapter_errors
 from src.adapters.repository.errors import (
-    InvitationAlreadyExistsError,
     InvitationNotFoundError,
-    JoinRequestAlreadyExistsError,
     JoinRequestNotFoundError,
-    ParticipantAlreadyInTeamError,
     ParticipantNotFoundError,
     RoleNotFoundError,
     TeamNotFoundError,
@@ -38,6 +35,8 @@ from src.adapters.repository.invitation.postgres.queries import (
     GET_INVITATIONS_BY_MEMBER_QUERY,
     GET_INVITATIONS_BY_TEAM_QUERY,
     GET_JOIN_REQUEST_QUERY,
+    GET_JOIN_REQUESTS_BY_OWNER_QUERY,
+    GET_JOIN_REQUESTS_BY_TEAM_QUERY,
     GET_JOIN_REQUESTS_BY_TRACK_AND_MEMBER_QUERY,
     GET_PARTICIPANT_QUERY,
     GET_ROLE_QUERY,
@@ -93,16 +92,20 @@ class InvitationPostgresRepository:
                             ) from e
                         except psycopg.errors.ForeignKeyViolation as e:
                             raise self._translate_fk_violation(e) from e
-        except (adapter_errors.InvitationAlreadyExistsError, adapter_errors.TeamNotFoundError,
-                adapter_errors.ParticipantNotFoundError, adapter_errors.RoleNotFoundError):
+        except (
+            adapter_errors.InvitationAlreadyExistsError,
+            adapter_errors.TeamNotFoundError,
+            adapter_errors.ParticipantNotFoundError,
+            adapter_errors.RoleNotFoundError,
+        ):
             raise
         except Error as e:
+            logger.error("db_invitation_repository_error", error=str(e))
             raise adapter_errors.RepositoryError from e
 
     @trace_db_operation("invitation_service", "SELECT", "invitation")
     async def get_invitation(self, invitation_id: uuid.UUID) -> Invitation:
-        logger.debug("db_invitation_select_started",
-                     invitation_id=str(invitation_id))
+        logger.debug("db_invitation_select_started", invitation_id=str(invitation_id))
         try:
             async with self._pool.connection() as conn:
                 row = await self._fetch_invitation_row(conn, invitation_id)
@@ -114,12 +117,12 @@ class InvitationPostgresRepository:
         except adapter_errors.InvitationNotFoundError:
             raise
         except Error as e:
+            logger.error("db_invitation_repository_error", error=str(e))
             raise adapter_errors.RepositoryError from e
 
     @trace_db_operation("invitation_service", "SELECT", "invitation")
     async def get_invitations_by_team(self, team_id: uuid.UUID) -> list[Invitation]:
-        logger.debug("db_invitations_by_team_select_started",
-                     team_id=str(team_id))
+        logger.debug("db_invitations_by_team_select_started", team_id=str(team_id))
         try:
             async with self._pool.connection() as conn:
                 team = await self._get_team_lookup(conn, team_id)
@@ -132,12 +135,14 @@ class InvitationPostgresRepository:
         except adapter_errors.TeamNotFoundError:
             raise
         except Error as e:
+            logger.error("db_invitation_repository_error", error=str(e))
             raise adapter_errors.RepositoryError from e
 
     @trace_db_operation("invitation_service", "SELECT", "invitation")
     async def get_invitations_by_member(self, member_id: uuid.UUID) -> list[Invitation]:
-        logger.debug("db_invitations_by_member_select_started",
-                     member_id=str(member_id))
+        logger.debug(
+            "db_invitations_by_member_select_started", member_id=str(member_id)
+        )
         try:
             async with self._pool.connection() as conn:
                 return await self._load_invitations_multi_team(
@@ -146,12 +151,12 @@ class InvitationPostgresRepository:
                     {"member_id": str(member_id)},
                 )
         except Error as e:
+            logger.error("db_invitation_repository_error", error=str(e))
             raise adapter_errors.RepositoryError from e
 
     @trace_db_operation("invitation_service", "DELETE", "invitation")
     async def delete_invitation(self, invitation_id: uuid.UUID) -> None:
-        logger.debug("db_invitation_deletion_started",
-                     invitation_id=str(invitation_id))
+        logger.debug("db_invitation_deletion_started", invitation_id=str(invitation_id))
         try:
             async with self._pool.connection() as conn:
                 async with conn.transaction():
@@ -166,6 +171,7 @@ class InvitationPostgresRepository:
         except adapter_errors.InvitationNotFoundError:
             raise
         except Error as e:
+            logger.error("db_invitation_repository_error", error=str(e))
             raise adapter_errors.RepositoryError from e
 
     @trace_db_operation("invitation_service", "UPDATE", "invitation")
@@ -178,15 +184,18 @@ class InvitationPostgresRepository:
             InvitationNotFoundError
             ParticipantAlreadyInTeamError
         """
-        logger.debug("db_invitation_accept_started",
-                     invitation_id=str(invitation_id))
+        logger.debug("db_invitation_accept_started", invitation_id=str(invitation_id))
         try:
             async with self._pool.connection() as conn:
                 async with conn.transaction():
                     row = await self._fetch_invitation_row(conn, invitation_id)
                     team = await self._get_team_lookup(conn, row.team_id)
-                    owner = await self._get_participant(conn, row.owner_id, team.event_id)
-                    member = await self._get_participant(conn, row.member_id, team.event_id)
+                    owner = await self._get_participant(
+                        conn, row.owner_id, team.event_id
+                    )
+                    member = await self._get_participant(
+                        conn, row.member_id, team.event_id
+                    )
                     role = await self._get_role(conn, row.role_id)
 
                     if member.have_team:
@@ -205,8 +214,7 @@ class InvitationPostgresRepository:
                         )
                         await cursor.execute(
                             DECREMENT_TEAM_REQUIRED_COUNT_QUERY,
-                            {"team_id": str(row.team_id),
-                             "role_id": str(row.role_id)},
+                            {"team_id": str(row.team_id), "role_id": str(row.role_id)},
                         )
                         await cursor.execute(
                             SET_HAVE_TEAM_QUERY,
@@ -239,9 +247,13 @@ class InvitationPostgresRepository:
                         role_id=member.role_id,
                     )
                     return row.to_model(owner=owner, member=refreshed_member, role=role)
-        except (adapter_errors.InvitationNotFoundError, adapter_errors.ParticipantAlreadyInTeamError):
+        except (
+            adapter_errors.InvitationNotFoundError,
+            adapter_errors.ParticipantAlreadyInTeamError,
+        ):
             raise
         except Error as e:
+            logger.error("db_invitation_repository_error", error=str(e))
             raise adapter_errors.RepositoryError from e
 
     @trace_db_operation("invitation_service", "INSERT", "join_request")
@@ -275,16 +287,22 @@ class InvitationPostgresRepository:
                             ) from e
                         except psycopg.errors.ForeignKeyViolation as e:
                             raise self._translate_fk_violation(e) from e
-        except (adapter_errors.JoinRequestAlreadyExistsError, adapter_errors.TeamNotFoundError,
-                adapter_errors.ParticipantNotFoundError, adapter_errors.RoleNotFoundError):
+        except (
+            adapter_errors.JoinRequestAlreadyExistsError,
+            adapter_errors.TeamNotFoundError,
+            adapter_errors.ParticipantNotFoundError,
+            adapter_errors.RoleNotFoundError,
+        ):
             raise
         except Error as e:
+            logger.error("db_invitation_repository_error", error=str(e))
             raise adapter_errors.RepositoryError from e
 
     @trace_db_operation("invitation_service", "SELECT", "join_request")
     async def get_join_request(self, join_request_id: uuid.UUID) -> JoinRequest:
-        logger.debug("db_join_request_select_started",
-                     join_request_id=str(join_request_id))
+        logger.debug(
+            "db_join_request_select_started", join_request_id=str(join_request_id)
+        )
         try:
             async with self._pool.connection() as conn:
                 row = await self._fetch_join_request_row(conn, join_request_id)
@@ -296,6 +314,7 @@ class InvitationPostgresRepository:
         except adapter_errors.JoinRequestNotFoundError:
             raise
         except Error as e:
+            logger.error("db_invitation_repository_error", error=str(e))
             raise adapter_errors.RepositoryError from e
 
     @trace_db_operation("invitation_service", "SELECT", "join_request")
@@ -315,19 +334,54 @@ class InvitationPostgresRepository:
                     {"track_id": str(track_id), "member_id": str(member_id)},
                 )
         except Error as e:
+            logger.error("db_invitation_repository_error", error=str(e))
+            raise adapter_errors.RepositoryError from e
+
+    @trace_db_operation("invitation_service", "SELECT", "join_request")
+    async def get_join_requests_by_team(self, team_id: uuid.UUID) -> list[JoinRequest]:
+        logger.debug("db_join_requests_by_team_select_started", team_id=str(team_id))
+        try:
+            async with self._pool.connection() as conn:
+                team = await self._get_team_lookup(conn, team_id)
+                return await self._load_join_requests(
+                    conn,
+                    GET_JOIN_REQUESTS_BY_TEAM_QUERY,
+                    {"team_id": str(team_id)},
+                    event_id=team.event_id,
+                )
+        except adapter_errors.TeamNotFoundError:
+            raise
+        except Error as e:
+            logger.error("db_invitation_repository_error", error=str(e))
+            raise adapter_errors.RepositoryError from e
+
+    @trace_db_operation("invitation_service", "SELECT", "join_request")
+    async def get_join_requests_by_owner(
+        self, owner_id: uuid.UUID
+    ) -> list[JoinRequest]:
+        logger.debug("db_join_requests_by_owner_select_started", owner_id=str(owner_id))
+        try:
+            async with self._pool.connection() as conn:
+                return await self._load_join_requests_multi_team(
+                    conn,
+                    GET_JOIN_REQUESTS_BY_OWNER_QUERY,
+                    {"owner_id": str(owner_id)},
+                )
+        except Error as e:
+            logger.error("db_invitation_repository_error", error=str(e))
             raise adapter_errors.RepositoryError from e
 
     @trace_db_operation("invitation_service", "DELETE", "join_request")
     async def delete_join_request(self, join_request_id: uuid.UUID) -> None:
-        logger.debug("db_join_request_deletion_started",
-                     join_request_id=str(join_request_id))
+        logger.debug(
+            "db_join_request_deletion_started", join_request_id=str(join_request_id)
+        )
         try:
             async with self._pool.connection() as conn:
                 async with conn.transaction():
                     async with conn.cursor() as cursor:
                         await cursor.execute(
-                            DELETE_JOIN_REQUEST_QUERY, {
-                                "id": str(join_request_id)}
+                            DELETE_JOIN_REQUEST_QUERY, {"id": str(join_request_id)}
                         )
                         if await cursor.fetchone() is None:
                             raise adapter_errors.JoinRequestNotFoundError(
@@ -336,6 +390,7 @@ class InvitationPostgresRepository:
         except adapter_errors.JoinRequestNotFoundError:
             raise
         except Error as e:
+            logger.error("db_invitation_repository_error", error=str(e))
             raise adapter_errors.RepositoryError from e
 
     @trace_db_operation("invitation_service", "UPDATE", "join_request")
@@ -343,15 +398,20 @@ class InvitationPostgresRepository:
         """Captain accepts join request: add member to team, decrement role,
         set have_team, delete all pending requests/invitations for member.
         """
-        logger.debug("db_join_request_accept_started",
-                     join_request_id=str(join_request_id))
+        logger.debug(
+            "db_join_request_accept_started", join_request_id=str(join_request_id)
+        )
         try:
             async with self._pool.connection() as conn:
                 async with conn.transaction():
                     row = await self._fetch_join_request_row(conn, join_request_id)
                     team = await self._get_team_lookup(conn, row.team_id)
-                    owner = await self._get_participant(conn, row.owner_id, team.event_id)
-                    member = await self._get_participant(conn, row.member_id, team.event_id)
+                    owner = await self._get_participant(
+                        conn, row.owner_id, team.event_id
+                    )
+                    member = await self._get_participant(
+                        conn, row.member_id, team.event_id
+                    )
                     role = await self._get_role(conn, row.role_id)
 
                     if member.have_team:
@@ -370,8 +430,7 @@ class InvitationPostgresRepository:
                         )
                         await cursor.execute(
                             DECREMENT_TEAM_REQUIRED_COUNT_QUERY,
-                            {"team_id": str(row.team_id),
-                             "role_id": str(row.role_id)},
+                            {"team_id": str(row.team_id), "role_id": str(row.role_id)},
                         )
                         await cursor.execute(
                             SET_HAVE_TEAM_QUERY,
@@ -400,9 +459,13 @@ class InvitationPostgresRepository:
                         role_id=member.role_id,
                     )
                     return row.to_model(owner=owner, member=refreshed_member, role=role)
-        except (adapter_errors.JoinRequestNotFoundError, adapter_errors.ParticipantAlreadyInTeamError):
+        except (
+            adapter_errors.JoinRequestNotFoundError,
+            adapter_errors.ParticipantAlreadyInTeamError,
+        ):
             raise
         except Error as e:
+            logger.error("db_invitation_repository_error", error=str(e))
             raise adapter_errors.RepositoryError from e
 
     @staticmethod
@@ -425,8 +488,7 @@ class InvitationPostgresRepository:
             await cursor.execute(GET_INVITATION_QUERY, {"id": str(invitation_id)})
             row = await cursor.fetchone()
             if row is None:
-                raise InvitationNotFoundError(
-                    f"Invitation {invitation_id} not found")
+                raise InvitationNotFoundError(f"Invitation {invitation_id} not found")
             return row
 
     async def _fetch_join_request_row(
@@ -514,6 +576,23 @@ class InvitationPostgresRepository:
             team = await self._get_team_lookup(conn, row.team_id)
             owner = await self._get_participant(conn, row.owner_id, team.event_id)
             member = await self._get_participant(conn, row.member_id, team.event_id)
+            role = await self._get_role(conn, row.role_id)
+            result.append(row.to_model(owner=owner, member=member, role=role))
+        return result
+
+    async def _load_join_requests(
+        self, conn, query: str, params: dict, event_id: uuid.UUID
+    ) -> list[JoinRequest]:
+        async with conn.cursor(
+            row_factory=psycopg.rows.class_row(JoinRequestRow)
+        ) as cursor:
+            await cursor.execute(query, params)
+            rows = await cursor.fetchall()
+
+        result: list[JoinRequest] = []
+        for row in rows:
+            owner = await self._get_participant(conn, row.owner_id, event_id)
+            member = await self._get_participant(conn, row.member_id, event_id)
             role = await self._get_role(conn, row.role_id)
             result.append(row.to_model(owner=owner, member=member, role=role))
         return result

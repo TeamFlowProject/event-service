@@ -6,7 +6,7 @@ CREATE TABLE teams (
     owner_id UUID NOT NULL,
     name VARCHAR(255) NOT NULL DEFAULT '',
     description TEXT NOT NULL DEFAULT '',
-    status VARCHAR(50) NOT NULL DEFAULT 'DRAFT',
+    status VARCHAR(50) NOT NULL DEFAULT 'BUILDING',
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
 

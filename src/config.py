@@ -21,6 +21,10 @@ class Settings(BaseSettings):
     )
     kafka_topic_events: str = Field(default="event-events", alias="KAFKA_TOPIC_EVENTS")
     kafka_group_id: str = Field(default="event-service", alias="KAFKA_GROUP_ID")
+    kafka_confirmation_group_id: str = Field(
+        default="event-service-confirmation",
+        alias="KAFKA_CONFIRMATION_GROUP_ID",
+    )
     log_level: str = Field(default="INFO", alias="LOG_LEVEL")
     log_json: bool = Field(default=False, alias="LOG_JSON")
     otel_service_name: str = Field(default="event-service", alias="OTEL_SERVICE_NAME")

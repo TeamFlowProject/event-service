@@ -44,6 +44,11 @@ class InvitationService:
         )
 
         if invitation.member.have_team:
+            logger.warning(
+                "service_create_invitation_member_already_in_team",
+                invitation_id=str(invitation.id),
+                member_id=str(invitation.member.id),
+            )
             raise service_errors.ParticipantAlreadyInTeam(
                 f"Participant {invitation.member.id} already in a team"
             )
@@ -51,14 +56,36 @@ class InvitationService:
         try:
             await self._repository.create_invitation(invitation)
         except adapter_errors.TeamNotFoundError as e:
+            logger.warning(
+                "service_create_invitation_team_not_found",
+                invitation_id=str(invitation.id),
+                team_id=str(invitation.team_id),
+                error=str(e),
+            )
             raise service_errors.TeamNotFoundError("Team not found") from e
         except adapter_errors.ParticipantNotFoundError as e:
+            logger.warning(
+                "service_create_invitation_participant_not_found",
+                invitation_id=str(invitation.id),
+                member_id=str(invitation.member.id),
+                error=str(e),
+            )
             raise service_errors.ParticipantNotFoundError(
                 "Participant not found"
             ) from e
         except adapter_errors.RoleNotFoundError as e:
+            logger.warning(
+                "service_create_invitation_role_not_found",
+                invitation_id=str(invitation.id),
+                error=str(e),
+            )
             raise service_errors.RoleNotFoundError("Role not found") from e
         except adapter_errors.InvitationAlreadyExistsError as e:
+            logger.warning(
+                "service_invitation_already_exists",
+                invitation_id=str(invitation.id),
+                error=str(e),
+            )
             raise service_errors.InvitationAlreadyExistsError(
                 "Invitation already exists"
             ) from e
@@ -75,25 +102,41 @@ class InvitationService:
         span = trace.get_current_span()
         span.set_attribute("invitation.id", str(invitation_id))
 
-        logger.info("service_receiving_invitation",
-                    invitation_id=str(invitation_id))
+        logger.info("service_receiving_invitation", invitation_id=str(invitation_id))
 
         try:
             invitation = await self._repository.get_invitation(invitation_id)
-            logger.info(
-                "service_invitation_received", invitation_id=str(invitation_id)
-            )
+            logger.info("service_invitation_received", invitation_id=str(invitation_id))
             return invitation
         except adapter_errors.InvitationNotFoundError as e:
-            raise service_errors.InvitationNotFoundError(
-                "Invitation not found") from e
+            logger.warning(
+                "service_get_invitation_not_found",
+                invitation_id=str(invitation_id),
+                error=str(e),
+            )
+            raise service_errors.InvitationNotFoundError("Invitation not found") from e
         except adapter_errors.TeamNotFoundError as e:
+            logger.warning(
+                "service_get_invitation_team_not_found",
+                invitation_id=str(invitation_id),
+                error=str(e),
+            )
             raise service_errors.TeamNotFoundError("Team not found") from e
         except adapter_errors.ParticipantNotFoundError as e:
+            logger.warning(
+                "service_get_invitation_participant_not_found",
+                invitation_id=str(invitation_id),
+                error=str(e),
+            )
             raise service_errors.ParticipantNotFoundError(
                 "Participant not found"
             ) from e
         except adapter_errors.RoleNotFoundError as e:
+            logger.warning(
+                "service_get_invitation_role_not_found",
+                invitation_id=str(invitation_id),
+                error=str(e),
+            )
             raise service_errors.RoleNotFoundError("Role not found") from e
 
     @trace_business_logic("invitation_service")
@@ -101,8 +144,7 @@ class InvitationService:
         span = trace.get_current_span()
         span.set_attribute("team.id", str(team_id))
 
-        logger.info("service_receiving_invitations_by_team",
-                    team_id=str(team_id))
+        logger.info("service_receiving_invitations_by_team", team_id=str(team_id))
 
         try:
             invitations = await self._repository.get_invitations_by_team(team_id)
@@ -113,7 +155,27 @@ class InvitationService:
             )
             return invitations
         except adapter_errors.TeamNotFoundError as e:
+            logger.warning(
+                "service_invitations_by_team_not_found",
+                team_id=str(team_id),
+                error=str(e),
+            )
             raise service_errors.TeamNotFoundError("Team not found") from e
+
+    @trace_business_logic("invitation_service")
+    async def get_invitations_by_member(self, member_id: uuid.UUID) -> list[Invitation]:
+        span = trace.get_current_span()
+        span.set_attribute("member.id", str(member_id))
+
+        logger.info("service_receiving_invitations_by_member", member_id=str(member_id))
+
+        invitations = await self._repository.get_invitations_by_member(member_id)
+        logger.info(
+            "service_invitations_by_member_received",
+            member_id=str(member_id),
+            count=len(invitations),
+        )
+        return invitations
 
     @trace_business_logic("invitation_service")
     async def cancel_invitation(self, invitation_id: uuid.UUID) -> None:
@@ -121,19 +183,21 @@ class InvitationService:
         span = trace.get_current_span()
         span.set_attribute("invitation.id", str(invitation_id))
 
-        logger.info("service_canceling_invitation",
-                    invitation_id=str(invitation_id))
+        logger.info("service_canceling_invitation", invitation_id=str(invitation_id))
 
         try:
             invitation = await self._repository.get_invitation(invitation_id)
             await self._repository.delete_invitation(invitation_id)
         except adapter_errors.InvitationNotFoundError as e:
-            raise service_errors.InvitationNotFoundError(
-                "Invitation not found") from e
+            logger.warning(
+                "service_cancel_invitation_not_found",
+                invitation_id=str(invitation_id),
+                error=str(e),
+            )
+            raise service_errors.InvitationNotFoundError("Invitation not found") from e
 
         await self._kafka_producer.send_invitation_canceled(invitation)
-        logger.info("service_invitation_canceled",
-                    invitation_id=str(invitation_id))
+        logger.info("service_invitation_canceled", invitation_id=str(invitation_id))
 
     @trace_business_logic("invitation_service")
     async def accept_invitation(self, invitation_id: uuid.UUID) -> None:
@@ -141,22 +205,29 @@ class InvitationService:
         span = trace.get_current_span()
         span.set_attribute("invitation.id", str(invitation_id))
 
-        logger.info("service_accepting_invitation",
-                    invitation_id=str(invitation_id))
+        logger.info("service_accepting_invitation", invitation_id=str(invitation_id))
 
         try:
             invitation = await self._repository.accept_invitation(invitation_id)
         except adapter_errors.InvitationNotFoundError as e:
-            raise service_errors.InvitationNotFoundError(
-                "Invitation not found") from e
+            logger.warning(
+                "service_accept_invitation_not_found",
+                invitation_id=str(invitation_id),
+                error=str(e),
+            )
+            raise service_errors.InvitationNotFoundError("Invitation not found") from e
         except adapter_errors.ParticipantAlreadyInTeamError as e:
+            logger.warning(
+                "service_accept_invitation_already_in_team",
+                invitation_id=str(invitation_id),
+                error=str(e),
+            )
             raise service_errors.ParticipantAlreadyInTeam(
                 "Participant already in a team"
             ) from e
 
         await self._kafka_producer.send_invitation_accepted(invitation)
-        logger.info("service_invitation_accepted",
-                    invitation_id=str(invitation_id))
+        logger.info("service_invitation_accepted", invitation_id=str(invitation_id))
 
     @trace_business_logic("invitation_service")
     async def reject_invitation(self, invitation_id: uuid.UUID) -> None:
@@ -164,19 +235,21 @@ class InvitationService:
         span = trace.get_current_span()
         span.set_attribute("invitation.id", str(invitation_id))
 
-        logger.info("service_rejecting_invitation",
-                    invitation_id=str(invitation_id))
+        logger.info("service_rejecting_invitation", invitation_id=str(invitation_id))
 
         try:
             invitation = await self._repository.get_invitation(invitation_id)
             await self._repository.delete_invitation(invitation_id)
         except adapter_errors.InvitationNotFoundError as e:
-            raise service_errors.InvitationNotFoundError(
-                "Invitation not found") from e
+            logger.warning(
+                "service_reject_invitation_not_found",
+                invitation_id=str(invitation_id),
+                error=str(e),
+            )
+            raise service_errors.InvitationNotFoundError("Invitation not found") from e
 
         await self._kafka_producer.send_invitation_rejected(invitation)
-        logger.info("service_invitation_rejected",
-                    invitation_id=str(invitation_id))
+        logger.info("service_invitation_rejected", invitation_id=str(invitation_id))
 
     @trace_business_logic("invitation_service")
     async def create_join_request(self, join_request: JoinRequest) -> uuid.UUID:
@@ -194,6 +267,11 @@ class InvitationService:
         )
 
         if join_request.member.have_team:
+            logger.warning(
+                "service_create_join_request_member_already_in_team",
+                join_request_id=str(join_request.id),
+                member_id=str(join_request.member.id),
+            )
             raise service_errors.ParticipantAlreadyInTeam(
                 f"Participant {join_request.member.id} already in a team"
             )
@@ -201,14 +279,36 @@ class InvitationService:
         try:
             await self._repository.create_join_request(join_request)
         except adapter_errors.TeamNotFoundError as e:
+            logger.warning(
+                "service_create_join_request_team_not_found",
+                join_request_id=str(join_request.id),
+                team_id=str(join_request.team_id),
+                error=str(e),
+            )
             raise service_errors.TeamNotFoundError("Team not found") from e
         except adapter_errors.ParticipantNotFoundError as e:
+            logger.warning(
+                "service_create_join_request_participant_not_found",
+                join_request_id=str(join_request.id),
+                member_id=str(join_request.member.id),
+                error=str(e),
+            )
             raise service_errors.ParticipantNotFoundError(
                 "Participant not found"
             ) from e
         except adapter_errors.RoleNotFoundError as e:
+            logger.warning(
+                "service_create_join_request_role_not_found",
+                join_request_id=str(join_request.id),
+                error=str(e),
+            )
             raise service_errors.RoleNotFoundError("Role not found") from e
         except adapter_errors.JoinRequestAlreadyExistsError as e:
+            logger.warning(
+                "service_join_request_already_exists",
+                join_request_id=str(join_request.id),
+                error=str(e),
+            )
             raise service_errors.JoinRequestAlreadyExistsError(
                 "JoinRequest already exists"
             ) from e
@@ -237,16 +337,36 @@ class InvitationService:
             )
             return jr
         except adapter_errors.JoinRequestNotFoundError as e:
+            logger.warning(
+                "service_get_join_request_not_found",
+                join_request_id=str(join_request_id),
+                error=str(e),
+            )
             raise service_errors.JoinRequestNotFoundError(
                 "JoinRequest not found"
             ) from e
         except adapter_errors.TeamNotFoundError as e:
+            logger.warning(
+                "service_get_join_request_team_not_found",
+                join_request_id=str(join_request_id),
+                error=str(e),
+            )
             raise service_errors.TeamNotFoundError("Team not found") from e
         except adapter_errors.ParticipantNotFoundError as e:
+            logger.warning(
+                "service_get_join_request_participant_not_found",
+                join_request_id=str(join_request_id),
+                error=str(e),
+            )
             raise service_errors.ParticipantNotFoundError(
                 "Participant not found"
             ) from e
         except adapter_errors.RoleNotFoundError as e:
+            logger.warning(
+                "service_get_join_request_role_not_found",
+                join_request_id=str(join_request_id),
+                error=str(e),
+            )
             raise service_errors.RoleNotFoundError("Role not found") from e
 
     @trace_business_logic("invitation_service")
@@ -276,6 +396,46 @@ class InvitationService:
         return join_requests
 
     @trace_business_logic("invitation_service")
+    async def get_join_requests_by_team(self, team_id: uuid.UUID) -> list[JoinRequest]:
+        span = trace.get_current_span()
+        span.set_attribute("team.id", str(team_id))
+
+        logger.info("service_receiving_join_requests_by_team", team_id=str(team_id))
+
+        try:
+            join_requests = await self._repository.get_join_requests_by_team(team_id)
+            logger.info(
+                "service_join_requests_by_team_received",
+                team_id=str(team_id),
+                count=len(join_requests),
+            )
+            return join_requests
+        except adapter_errors.TeamNotFoundError as e:
+            logger.warning(
+                "service_join_requests_by_team_team_not_found",
+                team_id=str(team_id),
+                error=str(e),
+            )
+            raise service_errors.TeamNotFoundError("Team not found") from e
+
+    @trace_business_logic("invitation_service")
+    async def get_join_requests_by_owner(
+        self, owner_id: uuid.UUID
+    ) -> list[JoinRequest]:
+        span = trace.get_current_span()
+        span.set_attribute("owner.id", str(owner_id))
+
+        logger.info("service_receiving_join_requests_by_owner", owner_id=str(owner_id))
+
+        join_requests = await self._repository.get_join_requests_by_owner(owner_id)
+        logger.info(
+            "service_join_requests_by_owner_received",
+            owner_id=str(owner_id),
+            count=len(join_requests),
+        )
+        return join_requests
+
+    @trace_business_logic("invitation_service")
     async def cancel_join_request(self, join_request_id: uuid.UUID) -> None:
         """User cancels his own join request."""
         span = trace.get_current_span()
@@ -289,6 +449,11 @@ class InvitationService:
             join_request = await self._repository.get_join_request(join_request_id)
             await self._repository.delete_join_request(join_request_id)
         except adapter_errors.JoinRequestNotFoundError as e:
+            logger.warning(
+                "service_cancel_join_request_not_found",
+                join_request_id=str(join_request_id),
+                error=str(e),
+            )
             raise service_errors.JoinRequestNotFoundError(
                 "JoinRequest not found"
             ) from e
@@ -311,10 +476,20 @@ class InvitationService:
         try:
             join_request = await self._repository.accept_join_request(join_request_id)
         except adapter_errors.JoinRequestNotFoundError as e:
+            logger.warning(
+                "service_accept_join_request_not_found",
+                join_request_id=str(join_request_id),
+                error=str(e),
+            )
             raise service_errors.JoinRequestNotFoundError(
                 "JoinRequest not found"
             ) from e
         except adapter_errors.ParticipantAlreadyInTeamError as e:
+            logger.warning(
+                "service_accept_join_request_already_in_team",
+                join_request_id=str(join_request_id),
+                error=str(e),
+            )
             raise service_errors.ParticipantAlreadyInTeam(
                 "Participant already in a team"
             ) from e
@@ -338,6 +513,11 @@ class InvitationService:
             join_request = await self._repository.get_join_request(join_request_id)
             await self._repository.delete_join_request(join_request_id)
         except adapter_errors.JoinRequestNotFoundError as e:
+            logger.warning(
+                "service_reject_join_request_not_found",
+                join_request_id=str(join_request_id),
+                error=str(e),
+            )
             raise service_errors.JoinRequestNotFoundError(
                 "JoinRequest not found"
             ) from e

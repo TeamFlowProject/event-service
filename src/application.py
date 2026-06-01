@@ -2,7 +2,9 @@ import asyncio
 import psycopg_pool
 import uvicorn
 from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 from loguru import logger
 
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
@@ -14,15 +16,18 @@ from src.adapters.repository.event.postgres.repository import EventPostgresRepos
 from src.adapters.repository.invitation.postgres.repository import (
     InvitationPostgresRepository,
 )
+from src.adapters.repository.team.postgres.repository import TeamPostgresRepository
 from src.adapters.repository.track.postgres.repository import TrackPostgresRepository
 from src.config import Settings
 from src.controller.middleware import ObservabilityMiddleware
 from src.controller.http.event.router import create_event_router
 from src.controller.http.invitation.router import create_invitation_router
+from src.controller.http.team.router import create_team_router
 from src.controller.http.track.router import create_track_router
-from src.controller.kafka.event_consumer import EventKafkaConsumer
+from src.controller.kafka.event_consumer import EventKafkaConsumer, TOPICS
 from src.service.event.service import EventService
 from src.service.invitation.service import InvitationService
+from src.service.team.service import TeamService
 from src.service.track.service import TrackService
 
 
@@ -49,6 +54,7 @@ async def run_application(settings: Settings) -> None:
     event_repository = EventPostgresRepository(db_connection)  # type: ignore
     track_repository = TrackPostgresRepository(db_connection)  # type: ignore
     invitation_repository = InvitationPostgresRepository(db_connection)  # type: ignore
+    team_repository = TeamPostgresRepository(db_connection)  # type: ignore
     logger.debug("Database connection established")
 
     logger.debug("Starting Kafka producer: {}", settings.kafka_bootstrap)
@@ -63,15 +69,32 @@ async def run_application(settings: Settings) -> None:
     event_service = EventService(event_repository, kafka_producer)
     track_service = TrackService(track_repository, kafka_producer)
     invitation_service = InvitationService(invitation_repository, kafka_producer)
+    team_service = TeamService(team_repository, kafka_producer)
     logger.debug("EventService initialized")
 
     fastapi_app = FastAPI(title="Event Service")
+
+    @fastapi_app.exception_handler(RequestValidationError)
+    async def validation_exception_handler(
+        request: Request, exc: RequestValidationError
+    ):
+        logger.warning(
+            "request_validation_failed",
+            path=request.url.path,
+            method=request.method,
+            errors=exc.errors(),
+            headers=dict(request.headers),
+        )
+        return JSONResponse(status_code=422, content={"detail": exc.errors()})
+
     event_router = create_event_router(event_service)
     track_router = create_track_router(track_service)
     invitation_router = create_invitation_router(invitation_service)
+    team_router = create_team_router(team_service)
     fastapi_app.include_router(event_router)
     fastapi_app.include_router(track_router)
     fastapi_app.include_router(invitation_router)
+    fastapi_app.include_router(team_router)
     logger.debug("HTTP router registered")
 
     if settings.otel_enabled:
@@ -88,15 +111,17 @@ async def run_application(settings: Settings) -> None:
     logger.debug("Metrics endpoint registered at /metrics")
 
     consumer = AIOKafkaConsumer(
-        settings.kafka_topic_commands,
+        *TOPICS,
         bootstrap_servers=settings.kafka_bootstrap,
-        group_id=settings.kafka_group_id,
+        group_id=settings.kafka_confirmation_group_id,
+        enable_auto_commit=False,
+        auto_offset_reset="earliest",
     )
-    kafka_consumer = EventKafkaConsumer(consumer, event_service)
+    kafka_consumer = EventKafkaConsumer(consumer, team_service)
     logger.debug(
-        "Kafka consumer created: topic={}, group={}",
-        settings.kafka_topic_commands,
-        settings.kafka_group_id,
+        "Kafka consumer created: topics={}, group={}",
+        TOPICS,
+        settings.kafka_confirmation_group_id,
     )
 
     config = uvicorn.Config(

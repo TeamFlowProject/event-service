@@ -4,7 +4,7 @@ from datetime import datetime
 from uuid_extensions import uuid7
 from loguru import logger
 from opentelemetry import trace
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Header, HTTPException, Request
 
 from src.controller.http.event.schemas import (
     CreatedResourceResponse,
@@ -38,7 +38,12 @@ def create_event_router(event_service: EventService) -> APIRouter:
     router = APIRouter(prefix="/api/v1", tags=["event"])
 
     @router.post("/events", response_model=CreatedResourceResponse, status_code=201)
-    async def create_event(request: CreateEventRequest):
+    async def create_event(
+        request: CreateEventRequest,
+        x_user_id: Optional[uuid.UUID] = Header(None, alias="X-User-Id"),
+    ):
+        if x_user_id is None:
+            raise HTTPException(status_code=401, detail="X-User-Id header missing")
         event_id = cast(uuid.UUID, uuid7())
         span = trace.get_current_span()
         span.set_attribute("event.id", str(event_id))
@@ -84,7 +89,12 @@ def create_event_router(event_service: EventService) -> APIRouter:
         return CreatedResourceResponse(id=created_id)
 
     @router.get("/events/{event_id}", response_model=EventResponse)
-    async def get_event_by_id(event_id: uuid.UUID):
+    async def get_event_by_id(
+        event_id: uuid.UUID,
+        x_user_id: Optional[uuid.UUID] = Header(None, alias="X-User-Id"),
+    ):
+        if x_user_id is None:
+            raise HTTPException(status_code=401, detail="X-User-Id header missing")
         span = trace.get_current_span()
         span.set_attribute("event.id", str(event_id))
 
@@ -114,7 +124,13 @@ def create_event_router(event_service: EventService) -> APIRouter:
         )
 
     @router.put("/events/{event_id}", response_model=EventResponse)
-    async def update_event(request: UpdateEventRequest, event_id: uuid.UUID):
+    async def update_event(
+        request: UpdateEventRequest,
+        event_id: uuid.UUID,
+        x_user_id: Optional[uuid.UUID] = Header(None, alias="X-User-Id"),
+    ):
+        if x_user_id is None:
+            raise HTTPException(status_code=401, detail="X-User-Id header missing")
         span = trace.get_current_span()
         span.set_attribute("event.id", str(event_id))
 
@@ -171,7 +187,12 @@ def create_event_router(event_service: EventService) -> APIRouter:
         )
 
     @router.delete("/events/{event_id}", status_code=204)
-    async def delete_event(event_id: uuid.UUID):
+    async def delete_event(
+        event_id: uuid.UUID,
+        x_user_id: Optional[uuid.UUID] = Header(None, alias="X-User-Id"),
+    ):
+        if x_user_id is None:
+            raise HTTPException(status_code=401, detail="X-User-Id header missing")
         span = trace.get_current_span()
         span.set_attribute("event.id", str(event_id))
 
@@ -195,7 +216,10 @@ def create_event_router(event_service: EventService) -> APIRouter:
         event_id: Optional[uuid.UUID] = None,
         offset: Optional[int] = None,
         limit: int = 10,
+        x_user_id: Optional[uuid.UUID] = Header(None, alias="X-User-Id"),
     ):
+        if x_user_id is None:
+            raise HTTPException(status_code=401, detail="X-User-Id header missing")
         span = trace.get_current_span()
         span.set_attribute("pagination.limit", limit)
         if event_id:
@@ -248,9 +272,15 @@ def create_event_router(event_service: EventService) -> APIRouter:
         status_code=201,
     )
     async def create_participant(
-        event_id: uuid.UUID, request: CreateParticipantRequest
+        event_id: uuid.UUID,
+        request: CreateParticipantRequest,
+        http_request: Request,
+        x_user_id: Optional[uuid.UUID] = Header(None, alias="X-User-Id"),
     ):
-        participant_id = cast(uuid.UUID, uuid7())
+        logger.info("create_participant_headers", headers=dict(http_request.headers))
+        if x_user_id is None:
+            raise HTTPException(status_code=401, detail="X-User-Id header missing")
+        participant_id = x_user_id
         span = trace.get_current_span()
         span.set_attribute("event.id", str(event_id))
         span.set_attribute("participant.id", str(participant_id))
@@ -307,7 +337,10 @@ def create_event_router(event_service: EventService) -> APIRouter:
         participant_id: Optional[uuid.UUID] = None,
         offset: Optional[int] = None,
         limit: int = 10,
+        x_user_id: Optional[uuid.UUID] = Header(None, alias="X-User-Id"),
     ):
+        if x_user_id is None:
+            raise HTTPException(status_code=401, detail="X-User-Id header missing")
         span = trace.get_current_span()
         span.set_attribute("event.id", str(event_id))
         span.set_attribute("pagination.limit", limit)
@@ -367,7 +400,10 @@ def create_event_router(event_service: EventService) -> APIRouter:
         event_id: Optional[uuid.UUID] = None,
         offset: Optional[int] = None,
         limit: int = 10,
+        x_user_id: Optional[uuid.UUID] = Header(None, alias="X-User-Id"),
     ):
+        if x_user_id is None:
+            raise HTTPException(status_code=401, detail="X-User-Id header missing")
         span = trace.get_current_span()
         span.set_attribute("participant.id", str(participant_id))
         span.set_attribute("pagination.limit", limit)

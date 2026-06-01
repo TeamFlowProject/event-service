@@ -70,7 +70,11 @@ def service():
 def client(service):
     app = FastAPI()
     app.include_router(create_track_router(service))
-    return AsyncClient(transport=ASGITransport(app=app), base_url="http://test")
+    return AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+        headers={"X-User-Id": str(uuid.uuid4())},
+    )
 
 
 @pytest.mark.unit

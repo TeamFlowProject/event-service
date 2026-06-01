@@ -22,6 +22,13 @@ class TeamService(Protocol):
         self, team_id: uuid.UUID, status: TeamStatusEnum
     ) -> None: ...
 
+    async def change_member_role(
+        self,
+        team_id: uuid.UUID,
+        member_id: uuid.UUID,
+        new_role_id: uuid.UUID,
+    ) -> None: ...
+
     async def get_teams_by_event_id(self, event_id: uuid.UUID) -> list[Team]: ...
 
     async def get_teams_by_user(self, user_id: uuid.UUID) -> list[Team]: ...

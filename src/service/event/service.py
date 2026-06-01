@@ -33,6 +33,9 @@ class EventService:
             logger.info("service_event_received", event_id=str(event_id))
             return event
         except adapter_errors.EventNotFoundError as e:
+            logger.warning(
+                "service_event_not_found", event_id=str(event_id), error=str(e)
+            )
             raise service_errors.EventNotFoundError from e
 
     @trace_business_logic("event_service")
@@ -57,6 +60,11 @@ class EventService:
         )
 
         if (event_id is not None) and (offset is not None):
+            logger.warning(
+                "service_events_page_invalid_pagination",
+                event_id=str(event_id),
+                offset=offset,
+            )
             raise service_errors.PaginationError(
                 "Event id or offset must be specified"
             ) from None
@@ -71,8 +79,15 @@ class EventService:
                     offset=offset, limit=limit
                 )
         except adapter_errors.RepositoryError as e:
+            logger.error(
+                "service_events_page_repository_error",
+                event_id=str(event_id) if event_id else None,
+                offset=offset,
+                error=str(e),
+            )
             raise service_errors.EventRepositoryError from e
 
+        logger.warning("service_events_page_no_pagination", limit=limit)
         raise service_errors.PaginationError("Offset or id must be specified")
 
     @trace_business_logic("event_service")
@@ -93,8 +108,18 @@ class EventService:
             logger.info("service_event_created", event_id=str(event.id))
             return event.id
         except adapter_errors.EventAlreadyExistsError as e:
+            logger.warning(
+                "service_event_already_exists",
+                event_id=str(event.id),
+                error=str(e),
+            )
             raise service_errors.EventAlreadyExistsError from e
         except adapter_errors.RepositoryError as e:
+            logger.error(
+                "service_event_create_repository_error",
+                event_id=str(event.id),
+                error=str(e),
+            )
             raise service_errors.EventRepositoryError from e
 
     @trace_business_logic("event_service")
@@ -109,8 +134,18 @@ class EventService:
             await self._kafka_producer.send_update_event(event)
             logger.info("service_event_updated", event_id=str(event.id))
         except adapter_errors.EventNotFoundError as e:
+            logger.warning(
+                "service_event_update_not_found",
+                event_id=str(event.id),
+                error=str(e),
+            )
             raise service_errors.EventNotFoundError from e
         except adapter_errors.RepositoryError as e:
+            logger.error(
+                "service_event_update_repository_error",
+                event_id=str(event.id),
+                error=str(e),
+            )
             raise service_errors.EventRepositoryError from e
 
     @trace_business_logic("event_service")
@@ -126,8 +161,18 @@ class EventService:
             await self._kafka_producer.send_delete_event(event)
             logger.info("service_event_deleted", event_id=str(event_id))
         except adapter_errors.EventNotFoundError as e:
+            logger.warning(
+                "service_event_delete_not_found",
+                event_id=str(event_id),
+                error=str(e),
+            )
             raise service_errors.EventNotFoundError from e
         except adapter_errors.RepositoryError as e:
+            logger.error(
+                "service_event_delete_repository_error",
+                event_id=str(event_id),
+                error=str(e),
+            )
             raise service_errors.EventRepositoryError from e
 
     @trace_business_logic("event_service")
@@ -147,6 +192,12 @@ class EventService:
         try:
             event = await self._event_repository.get_event_by_id(event_id)
         except adapter_errors.EventNotFoundError as e:
+            logger.warning(
+                "service_add_participant_event_not_found",
+                event_id=str(event_id),
+                participant_id=str(participant.id),
+                error=str(e),
+            )
             raise service_errors.EventNotFoundError from e
 
         if event.status != EventStatusEnum.OPEN:
@@ -168,10 +219,22 @@ class EventService:
                 participant_id=str(participant.id),
             )
         except adapter_errors.ParticipantAlreadyExistsError as e:
+            logger.warning(
+                "service_participant_already_exists",
+                event_id=str(event_id),
+                participant_id=str(participant.id),
+                error=str(e),
+            )
             raise service_errors.ParticipantError(
                 "Participant already registered"
             ) from e
         except adapter_errors.RepositoryError as e:
+            logger.error(
+                "service_add_participant_repository_error",
+                event_id=str(event_id),
+                participant_id=str(participant.id),
+                error=str(e),
+            )
             raise service_errors.EventRepositoryError from e
 
     @trace_business_logic("event_service")
@@ -199,6 +262,12 @@ class EventService:
         )
 
         if (participant_id is not None) and (offset is not None):
+            logger.warning(
+                "service_participants_invalid_pagination",
+                event_id=str(event_id),
+                participant_id=str(participant_id),
+                offset=offset,
+            )
             raise service_errors.PaginationError(
                 "Participant id or offset must be specified"
             ) from None
@@ -213,12 +282,31 @@ class EventService:
                     event_id, offset, limit
                 )
         except adapter_errors.EventNotFoundError as e:
+            logger.warning(
+                "service_participants_event_not_found",
+                event_id=str(event_id),
+                error=str(e),
+            )
             raise service_errors.EventNotFoundError from e
         except adapter_errors.ParticipantNotFoundError as e:
+            logger.warning(
+                "service_participants_participant_not_found",
+                event_id=str(event_id),
+                participant_id=str(participant_id),
+                error=str(e),
+            )
             raise service_errors.ParticipantNotFoundError from e
         except adapter_errors.RepositoryError as e:
+            logger.error(
+                "service_participants_repository_error",
+                event_id=str(event_id),
+                error=str(e),
+            )
             raise service_errors.EventRepositoryError from e
 
+        logger.warning(
+            "service_participants_no_pagination", event_id=str(event_id), limit=limit
+        )
         raise service_errors.PaginationError(
             "Participant id or offset must be specified"
         )
@@ -248,6 +336,12 @@ class EventService:
         )
 
         if (event_id is not None) and (offset is not None):
+            logger.warning(
+                "service_participant_events_invalid_pagination",
+                participant_id=str(participant_id),
+                event_id=str(event_id),
+                offset=offset,
+            )
             raise service_errors.PaginationError(
                 "Event id or offset must be specified"
             ) from None
@@ -262,10 +356,30 @@ class EventService:
                     participant_id, offset, limit
                 )
         except adapter_errors.EventNotFoundError as e:
+            logger.warning(
+                "service_participant_events_event_not_found",
+                participant_id=str(participant_id),
+                error=str(e),
+            )
             raise service_errors.EventNotFoundError from e
         except adapter_errors.ParticipantNotFoundError as e:
+            logger.warning(
+                "service_participant_events_participant_not_found",
+                participant_id=str(participant_id),
+                error=str(e),
+            )
             raise service_errors.ParticipantNotFoundError from e
         except adapter_errors.RepositoryError as e:
+            logger.error(
+                "service_participant_events_repository_error",
+                participant_id=str(participant_id),
+                error=str(e),
+            )
             raise service_errors.EventRepositoryError from e
 
+        logger.warning(
+            "service_participant_events_no_pagination",
+            participant_id=str(participant_id),
+            limit=limit,
+        )
         raise service_errors.PaginationError("Event id or offset must be specified")

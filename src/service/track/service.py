@@ -48,6 +48,12 @@ class TrackService:
         try:
             await self._track_repository.create_track(track)
         except adapter_errors.EventNotFoundError as e:
+            logger.warning(
+                "service_track_create_event_not_found",
+                track_id=str(track.id),
+                event_id=str(track.event_id),
+                error=str(e),
+            )
             raise service_errors.EventNotFoundError("Event not found") from e
 
         await self._kafka_producer.send_create_track(track)
@@ -78,8 +84,12 @@ class TrackService:
             await self._kafka_producer.send_update_track(track)
             logger.info("service_track_updated", track_id=str(track.id))
         except adapter_errors.TrackNotFoundError as e:
-            raise service_errors.TrackNotFoundError(
-                "Failed to update track") from e
+            logger.warning(
+                "service_track_update_not_found",
+                track_id=str(track.id),
+                error=str(e),
+            )
+            raise service_errors.TrackNotFoundError("Failed to update track") from e
 
     @trace_business_logic("track_service")
     async def delete_track(self, track_id: uuid.UUID) -> None:
@@ -103,8 +113,12 @@ class TrackService:
             await self._kafka_producer.send_delete_track(track)
             logger.info("service_track_deleted", track_id=str(track_id))
         except adapter_errors.TrackNotFoundError as e:
-            raise service_errors.TrackNotFoundError(
-                "Failed to delete track") from e
+            logger.warning(
+                "service_track_delete_not_found",
+                track_id=str(track_id),
+                error=str(e),
+            )
+            raise service_errors.TrackNotFoundError("Failed to delete track") from e
 
     @trace_business_logic("track_service")
     async def get_track(self, track_id: uuid.UUID) -> Track:
@@ -130,8 +144,12 @@ class TrackService:
             logger.info("service_track_received", track_id=str(track_id))
             return track
         except adapter_errors.TrackNotFoundError as e:
-            raise service_errors.TrackNotFoundError(
-                "Failed to get track") from e
+            logger.warning(
+                "service_track_get_not_found",
+                track_id=str(track_id),
+                error=str(e),
+            )
+            raise service_errors.TrackNotFoundError("Failed to get track") from e
 
     @trace_business_logic("track_service")
     async def get_tracks_by_event_id(self, event_id: uuid.UUID) -> list[Track]:
@@ -147,8 +165,7 @@ class TrackService:
         span = trace.get_current_span()
         span.set_attribute("event.id", str(event_id))
 
-        logger.info("service_receiving_tracks_by_event",
-                    event_id=str(event_id))
+        logger.info("service_receiving_tracks_by_event", event_id=str(event_id))
 
         tracks = await self._track_repository.get_tracks_by_event_id(event_id)
 

@@ -35,7 +35,18 @@ class ObservabilityMiddleware(BaseHTTPMiddleware):
         bound_logger.info("request_started")
 
         # the request
-        response = await call_next(request)
+        try:
+            response = await call_next(request)
+        except Exception as e:
+            duration = time.perf_counter() - start_time
+            bound_logger.exception(
+                "request_unhandled_exception",
+                error=str(e),
+                duration_ms=round(duration * 1000, 2),
+            )
+            current_span.record_exception(e)
+            current_span.set_status(trace.StatusCode.ERROR, str(e))
+            raise
         duration = time.perf_counter() - start_time
 
         # path normalization

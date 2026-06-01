@@ -41,6 +41,12 @@ KAFKA_MESSAGES_SENT_TOTAL = Counter(
     labelnames=["service", "topic", "status"],  # status: success / error
 )
 
+KAFKA_MESSAGES_CONSUMED_TOTAL = Counter(
+    name="kafka_messages_consumed_total",
+    documentation="Количество обработанных сообщений из Kafka",
+    labelnames=["service", "topic", "status"],  # status: success / error
+)
+
 
 async def metrics_endpoint(request: Request) -> Response:
     """

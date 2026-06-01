@@ -1,0 +1,2 @@
+ALTER TABLE teams
+    ADD COLUMN owner_role_id UUID REFERENCES roles (id) ON DELETE RESTRICT;
