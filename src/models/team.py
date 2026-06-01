@@ -31,6 +31,6 @@ class Team:
     required_roles: list[Role]
     name: str = ""
     description: str = ""
-    status: TeamStatusEnum = TeamStatusEnum.DRAFT
+    status: TeamStatusEnum = TeamStatusEnum.BUILDING
     created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))

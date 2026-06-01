@@ -38,6 +38,7 @@ from src.adapters.clients.topics import (
     TEAM_SUBMITTED,
     TEAM_MEMBER_LEFT,
     TEAM_MEMBER_KICKED,
+    TEAM_MEMBER_ROLE_CHANGED,
 )
 from src.adapters.clients.dto.invitation import (
     InvitationCreated,
@@ -59,7 +60,9 @@ from src.adapters.clients.dto.team import (
     TeamSubmitted,
     MemberLeft,
     MemberKicked,
+    MemberRoleChanged,
 )
+from typing import Optional
 
 tracer = trace.get_tracer(__name__)
 
@@ -238,4 +241,19 @@ class KafkaProducerClient:
         await self._producer.send_and_wait(
             topic=TEAM_MEMBER_KICKED,
             value=MemberKicked.from_team_and_member(team, member),
+        )
+
+    async def send_member_role_changed(
+        self,
+        team: Team,
+        member: Participant,
+        previous_role_id: Optional[uuid.UUID],
+    ) -> None:
+        await self._producer.send_and_wait(
+            topic=TEAM_MEMBER_ROLE_CHANGED,
+            value=MemberRoleChanged.from_team_and_member(
+                team,
+                member,
+                previous_role_id=(str(previous_role_id) if previous_role_id else None),
+            ),
         )

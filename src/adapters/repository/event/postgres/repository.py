@@ -74,8 +74,18 @@ class EventPostgresRepository:
                     )
 
         except UniqueViolation as e:
+            logger.warning(
+                "db_event_already_exists",
+                event_id=str(event.id),
+                error=str(e),
+            )
             raise adapter_error.EventAlreadyExistsError from e
         except Error as e:
+            logger.error(
+                "db_event_creation_failed",
+                event_id=str(event.id),
+                error=str(e),
+            )
             raise adapter_error.RepositoryError from e
 
     @trace_db_operation("event_service", "UPDATE", "event")
@@ -112,12 +122,21 @@ class EventPostgresRepository:
                     )
                     row = await cursor.fetchone()
                     if row is None:
+                        logger.warning(
+                            "db_event_update_not_found",
+                            event_id=str(event.id),
+                        )
                         raise adapter_error.EventNotFoundError(
                             f"Event with id {event.id} not found"
                         )
         except adapter_error.EventNotFoundError:
             raise
         except Error as e:
+            logger.error(
+                "db_event_update_failed",
+                event_id=str(event.id),
+                error=str(e),
+            )
             raise adapter_error.RepositoryError from e
 
     @trace_db_operation("event_service", "DELETE", "event")
@@ -138,12 +157,21 @@ class EventPostgresRepository:
                     await cursor.execute(DELETE_EVENT_QUERY, {"id": str(event_id)})
                     row = await cursor.fetchone()
                     if row is None:
+                        logger.warning(
+                            "db_event_delete_not_found",
+                            event_id=str(event_id),
+                        )
                         raise adapter_error.EventNotFoundError(
                             f"Event with id {event_id} not found"
                         )
         except adapter_error.EventNotFoundError:
             raise
         except Error as e:
+            logger.error(
+                "db_event_delete_failed",
+                event_id=str(event_id),
+                error=str(e),
+            )
             raise adapter_error.RepositoryError from e
 
     @trace_db_operation("event_service", "SELECT", "event")
@@ -170,6 +198,10 @@ class EventPostgresRepository:
                     await cursor.execute(SELECT_EVENT_QUERY, {"id": str(event_id)})
                     row = await cursor.fetchone()
                     if row is None:
+                        logger.warning(
+                            "db_event_get_not_found",
+                            event_id=str(event_id),
+                        )
                         raise adapter_error.EventNotFoundError(
                             f"Event with id {event_id} not found"
                         )
@@ -178,6 +210,11 @@ class EventPostgresRepository:
         except adapter_error.EventNotFoundError:
             raise
         except Error as e:
+            logger.error(
+                "db_event_get_failed",
+                event_id=str(event_id),
+                error=str(e),
+            )
             raise adapter_error.RepositoryError from e
 
     @trace_db_operation("event_service", "SELECT", "event")
@@ -215,6 +252,11 @@ class EventPostgresRepository:
                         rows[-1].id,
                     )
         except Error as e:
+            logger.error(
+                "db_events_page_by_id_failed",
+                event_id=str(event_id),
+                error=str(e),
+            )
             raise adapter_error.RepositoryError from e
 
     @trace_db_operation("event_service", "SELECT", "event")
@@ -253,6 +295,12 @@ class EventPostgresRepository:
                         rows[-1].id,
                     )
         except Error as e:
+            logger.error(
+                "db_events_page_by_num_failed",
+                offset=offset,
+                limit=limit,
+                error=str(e),
+            )
             raise adapter_error.RepositoryError from e
 
     @trace_db_operation("event_service", "INSERT", "participants")
@@ -296,8 +344,20 @@ class EventPostgresRepository:
                             },
                         )
         except UniqueViolation as e:
+            logger.warning(
+                "db_participant_already_exists",
+                event_id=str(event_id),
+                participant_id=str(participant.id),
+                error=str(e),
+            )
             raise adapter_error.ParticipantAlreadyExistsError from e
         except Error as e:
+            logger.error(
+                "db_add_participant_failed",
+                event_id=str(event_id),
+                participant_id=str(participant.id),
+                error=str(e),
+            )
             raise adapter_error.RepositoryError from e
 
     @trace_db_operation("event_service", "SELECT", "participants")
@@ -343,6 +403,12 @@ class EventPostgresRepository:
                     )
 
         except Error as e:
+            logger.error(
+                "db_participants_by_id_failed",
+                event_id=str(event_id),
+                participant_id=str(participant_id),
+                error=str(e),
+            )
             raise adapter_error.RepositoryError from e
 
     @trace_db_operation("event_service", "SELECT", "participants")
@@ -385,6 +451,12 @@ class EventPostgresRepository:
                     )
 
         except Error as e:
+            logger.error(
+                "db_participants_by_num_failed",
+                event_id=str(event_id),
+                offset=offset,
+                error=str(e),
+            )
             raise adapter_error.RepositoryError from e
 
     @trace_db_operation("event_service", "SELECT", "event")
@@ -431,6 +503,12 @@ class EventPostgresRepository:
                     )
 
         except Error as e:
+            logger.error(
+                "db_participant_events_by_num_failed",
+                participant_id=str(participant_id),
+                offset=offset,
+                error=str(e),
+            )
             raise adapter_error.RepositoryError from e
 
     @trace_db_operation("event_service", "SELECT", "event")
@@ -477,4 +555,10 @@ class EventPostgresRepository:
                     )
 
         except Error as e:
+            logger.error(
+                "db_participant_events_by_id_failed",
+                participant_id=str(participant_id),
+                event_id=str(event_id),
+                error=str(e),
+            )
             raise adapter_error.RepositoryError from e

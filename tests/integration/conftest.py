@@ -1,3 +1,5 @@
+import uuid
+
 import psycopg_pool
 import pytest
 import pytest_asyncio
@@ -84,6 +86,8 @@ async def http_client(track_service, event_service):
     app.include_router(create_event_router(event_service))
     app.include_router(create_track_router(track_service))
     async with AsyncClient(
-        transport=ASGITransport(app=app), base_url="http://test"
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+        headers={"X-User-Id": str(uuid.uuid4())},
     ) as client:
         yield client

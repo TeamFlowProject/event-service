@@ -14,6 +14,7 @@ class TeamRow:
     track_id: uuid.UUID
     event_id: uuid.UUID
     owner_id: uuid.UUID
+    owner_role_id: Optional[uuid.UUID]
     name: str
     description: str
     status: TeamStatusEnum
@@ -26,6 +27,7 @@ class TeamRow:
         members: list[Participant],
         required_roles: list[Role],
     ) -> Team:
+        owner.role_id = self.owner_role_id
         return Team(
             id=self.id,
             track_id=self.track_id,

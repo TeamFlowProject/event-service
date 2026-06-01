@@ -105,3 +105,20 @@ class MemberLeft(MemberTeamEventDTO): ...
 
 
 class MemberKicked(MemberTeamEventDTO): ...
+
+
+class MemberRoleChanged(MemberTeamEventDTO):
+    previous_role_id: Optional[str] = None
+
+    @classmethod
+    def from_team_and_member(
+        cls,
+        team: Team,
+        member: ParticipantModel,
+        previous_role_id: Optional[str] = None,
+    ) -> "MemberRoleChanged":
+        return cls(
+            **cls._base_fields(team),
+            member=ParticipantDTO.from_model(member),
+            previous_role_id=previous_role_id,
+        )

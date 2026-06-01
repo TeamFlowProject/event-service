@@ -105,7 +105,7 @@ class Participant(BaseModel):
 class CreateParticipantRequest(BaseModel):
     name: str = Field(min_length=1, max_length=255)
     surname: str = Field(min_length=1, max_length=255)
-    patronymic: str = Field(min_length=1, max_length=255)
+    patronymic: str = Field(default="", max_length=255)
     have_team: bool = False
 
 

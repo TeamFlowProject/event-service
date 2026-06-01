@@ -106,7 +106,11 @@ def service():
 def client(service):
     app = FastAPI()
     app.include_router(create_invitation_router(service))
-    return AsyncClient(transport=ASGITransport(app=app), base_url="http://test")
+    return AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+        headers={"X-User-Id": str(uuid.uuid4())},
+    )
 
 
 @pytest.mark.unit
@@ -375,11 +379,12 @@ class TestGetMyJoinRequests:
         service.get_join_requests_for_member.assert_awaited_once_with(track_id, user_id)
 
     @pytest.mark.asyncio
-    async def test_missing_header_returns_422(self, client):
+    async def test_missing_header_returns_401(self, client):
         async with client as c:
+            c.headers.pop("X-User-Id", None)
             resp = await c.get(f"/api/v1/track/{uuid.uuid4()}/join_requests")
 
-        assert resp.status_code == 422
+        assert resp.status_code == 401
 
 
 @pytest.mark.unit

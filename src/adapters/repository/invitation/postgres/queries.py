@@ -63,6 +63,18 @@ GET_JOIN_REQUESTS_BY_MEMBER_QUERY = """
     WHERE member_id = %(member_id)s
 """
 
+GET_JOIN_REQUESTS_BY_TEAM_QUERY = """
+    SELECT id, team_id, owner_id, member_id, role_id, description
+    FROM join_requests
+    WHERE team_id = %(team_id)s
+"""
+
+GET_JOIN_REQUESTS_BY_OWNER_QUERY = """
+    SELECT id, team_id, owner_id, member_id, role_id, description
+    FROM join_requests
+    WHERE owner_id = %(owner_id)s
+"""
+
 DELETE_JOIN_REQUEST_QUERY = """
     DELETE FROM join_requests
     WHERE id = %(id)s

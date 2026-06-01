@@ -1,4 +1,4 @@
-from typing import Protocol
+from typing import Optional, Protocol
 import uuid
 from src.models.team import Team, TeamStatusEnum
 from src.models.event import Participant
@@ -25,6 +25,13 @@ class TeamRepository(Protocol):
         self, team_id: uuid.UUID, status: TeamStatusEnum
     ) -> None: ...
 
+    async def change_member_role(
+        self,
+        team_id: uuid.UUID,
+        member_id: uuid.UUID,
+        new_role_id: uuid.UUID,
+    ) -> uuid.UUID: ...
+
     async def get_teams_by_event_id(self, event_id: uuid.UUID) -> list[Team]: ...
 
     async def get_teams_by_user_id(self, user_id: uuid.UUID) -> list[Team]: ...
@@ -48,3 +55,10 @@ class KafkaProducer(Protocol):
     async def send_member_left(self, team: Team, member: Participant) -> None: ...
 
     async def send_member_kicked(self, team: Team, member: Participant) -> None: ...
+
+    async def send_member_role_changed(
+        self,
+        team: Team,
+        member: Participant,
+        previous_role_id: Optional[uuid.UUID],
+    ) -> None: ...
